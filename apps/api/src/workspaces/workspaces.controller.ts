@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { PERMISSIONS } from '@vibe-crm/shared';
 import { WorkspacesService } from './workspaces.service';
-import { CurrentUser, SkipWorkspace, WorkspaceId } from '../common/decorators';
+import { CurrentUser, RequirePermissions, SkipWorkspace, WorkspaceId } from '../common/decorators';
 import { ZodValidationPipe } from '../common/zod.pipe';
 import { createWorkspaceSchema } from '@vibe-crm/validators';
 
@@ -15,6 +16,7 @@ export class WorkspacesController {
   }
 
   @Post()
+  @RequirePermissions(PERMISSIONS.WORKSPACES_CREATE)
   @SkipWorkspace()
   create(
     @CurrentUser('id') userId: string,
@@ -24,11 +26,13 @@ export class WorkspacesController {
   }
 
   @Get('members')
+  @RequirePermissions(PERMISSIONS.WORKSPACE_MEMBERS_READ)
   membersByHeader(@WorkspaceId() workspaceId: string) {
     return this.workspaces.getMembers(workspaceId);
   }
 
   @Get(':id/members')
+  @RequirePermissions(PERMISSIONS.WORKSPACE_MEMBERS_READ)
   @SkipWorkspace()
   membersById(
     @CurrentUser('id') userId: string,

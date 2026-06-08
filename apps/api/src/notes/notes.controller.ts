@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { z } from 'zod';
+import { PERMISSIONS } from '@vibe-crm/shared';
 import { NotesService } from './notes.service';
-import { CurrentUser, WorkspaceId } from '../common/decorators';
+import { CurrentUser, RequirePermissions, WorkspaceId } from '../common/decorators';
 import { ZodValidationPipe } from '../common/zod.pipe';
 import {
   createNoteSchema,
@@ -20,6 +21,7 @@ export class NotesController {
   constructor(private notes: NotesService) {}
 
   @Get()
+  @RequirePermissions(PERMISSIONS.NOTES_READ)
   list(
     @WorkspaceId() workspaceId: string,
     @Query(new ZodValidationPipe(noteListSchema)) query: unknown,
@@ -31,11 +33,13 @@ export class NotesController {
   }
 
   @Get(':id')
+  @RequirePermissions(PERMISSIONS.NOTES_READ)
   getOne(@WorkspaceId() workspaceId: string, @Param('id') id: string) {
     return this.notes.getOne(workspaceId, id);
   }
 
   @Post()
+  @RequirePermissions(PERMISSIONS.NOTES_CREATE)
   create(
     @WorkspaceId() workspaceId: string,
     @CurrentUser('id') authorId: string,
@@ -49,6 +53,7 @@ export class NotesController {
   }
 
   @Patch(':id')
+  @RequirePermissions(PERMISSIONS.NOTES_UPDATE)
   update(
     @WorkspaceId() workspaceId: string,
     @Param('id') id: string,
@@ -62,6 +67,7 @@ export class NotesController {
   }
 
   @Delete(':id')
+  @RequirePermissions(PERMISSIONS.NOTES_DELETE)
   remove(@WorkspaceId() workspaceId: string, @Param('id') id: string) {
     return this.notes.remove(workspaceId, id);
   }

@@ -4,7 +4,8 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": "./",
-    "incremental": false
+    "incremental": false,
+    "skipLibCheck": true
   },
   "include": ["src/**/*"]
 }

@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { PERMISSIONS } from '@vibe-crm/shared';
 import { TagsService } from './tags.service';
-import { WorkspaceId } from '../common/decorators';
+import { RequirePermissions, WorkspaceId } from '../common/decorators';
 import { ZodValidationPipe } from '../common/zod.pipe';
 import {
   createTagSchema,
@@ -13,6 +14,7 @@ export class TagsController {
   constructor(private tags: TagsService) {}
 
   @Get()
+  @RequirePermissions(PERMISSIONS.TAGS_READ)
   list(
     @WorkspaceId() workspaceId: string,
     @Query(new ZodValidationPipe(paginationSchema)) query: unknown,
@@ -24,6 +26,7 @@ export class TagsController {
   }
 
   @Post('assign')
+  @RequirePermissions(PERMISSIONS.TAGS_ASSIGN)
   assign(
     @WorkspaceId() workspaceId: string,
     @Body(new ZodValidationPipe(assignTagSchema)) body: unknown,
@@ -35,6 +38,7 @@ export class TagsController {
   }
 
   @Post('unassign')
+  @RequirePermissions(PERMISSIONS.TAGS_ASSIGN)
   unassign(
     @WorkspaceId() workspaceId: string,
     @Body(new ZodValidationPipe(assignTagSchema)) body: unknown,
@@ -46,11 +50,13 @@ export class TagsController {
   }
 
   @Get(':id')
+  @RequirePermissions(PERMISSIONS.TAGS_READ)
   getOne(@WorkspaceId() workspaceId: string, @Param('id') id: string) {
     return this.tags.getOne(workspaceId, id);
   }
 
   @Post()
+  @RequirePermissions(PERMISSIONS.TAGS_CREATE)
   create(
     @WorkspaceId() workspaceId: string,
     @Body(new ZodValidationPipe(createTagSchema)) body: unknown,
@@ -62,6 +68,7 @@ export class TagsController {
   }
 
   @Patch(':id')
+  @RequirePermissions(PERMISSIONS.TAGS_UPDATE)
   update(
     @WorkspaceId() workspaceId: string,
     @Param('id') id: string,
@@ -75,6 +82,7 @@ export class TagsController {
   }
 
   @Delete(':id')
+  @RequirePermissions(PERMISSIONS.TAGS_DELETE)
   remove(@WorkspaceId() workspaceId: string, @Param('id') id: string) {
     return this.tags.remove(workspaceId, id);
   }

@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AuthUser } from '@vibe-crm/shared';
 import { apiClient, syncAuthCookie } from '@/lib/api';
+import { useWorkspaceStore } from '@/stores/workspace-store';
 
 interface AuthState {
   user: AuthUser | null;
@@ -58,8 +59,21 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
-export async function fetchCurrentUser() {
-  const user = await apiClient.get<AuthUser>('/users/me', undefined);
+export async function fetchCurrentUser(options?: { skipWorkspace?: boolean }) {
+  const hasWorkspace = !!useWorkspaceStore.getState().currentWorkspaceId;
+  const skipWorkspace = options?.skipWorkspace ?? !hasWorkspace;
+
+  const user = await apiClient.get<AuthUser>('/users/me', undefined, { skipWorkspace });
   useAuthStore.getState().setUser(user);
   return user;
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('vibe:tokens-refreshed', (event) => {
+    const { accessToken, refreshToken } = (event as CustomEvent<{
+      accessToken: string;
+      refreshToken: string;
+    }>).detail;
+    useAuthStore.getState().setTokens(accessToken, refreshToken);
+  });
 }

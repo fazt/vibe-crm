@@ -1,4 +1,5 @@
 import type { ApiError } from '@vibe-crm/shared';
+import { clearAuthTokens, getAuthTokens, setAuthTokens } from '@/lib/auth-tokens';
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
@@ -23,21 +24,6 @@ type RequestOptions = RequestInit & {
 
 let refreshPromise: Promise<boolean> | null = null;
 
-function getStoredTokens() {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem('vibe-auth');
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed.state as {
-      accessToken: string | null;
-      refreshToken: string | null;
-    };
-  } catch {
-    return null;
-  }
-}
-
 function getWorkspaceId() {
   if (typeof window === 'undefined') return null;
   try {
@@ -60,7 +46,7 @@ function setAuthCookie(token: string | null) {
 }
 
 async function refreshAccessToken(): Promise<boolean> {
-  const tokens = getStoredTokens();
+  const tokens = getAuthTokens();
   if (!tokens?.refreshToken) return false;
 
   try {
@@ -77,19 +63,24 @@ async function refreshAccessToken(): Promise<boolean> {
       refreshToken: string;
     };
 
-    const raw = localStorage.getItem('vibe-auth');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      parsed.state.accessToken = data.accessToken;
-      parsed.state.refreshToken = data.refreshToken;
-      localStorage.setItem('vibe-auth', JSON.stringify(parsed));
-    }
-
+    setAuthTokens(data.accessToken, data.refreshToken);
     setAuthCookie(data.accessToken);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('vibe:tokens-refreshed', {
+          detail: data,
+        }),
+      );
+    }
     return true;
   } catch {
     return false;
   }
+}
+
+function handleSessionExpired() {
+  clearAuthTokens();
+  setAuthCookie(null);
 }
 
 async function ensureRefreshed(): Promise<boolean> {
@@ -127,7 +118,7 @@ export async function api<T>(
   }
 
   if (!skipAuth) {
-    const tokens = getStoredTokens();
+    const tokens = getAuthTokens();
     if (tokens?.accessToken) {
       headers.set('Authorization', `Bearer ${tokens.accessToken}`);
     }
@@ -145,11 +136,13 @@ export async function api<T>(
   if (res.status === 401 && !skipAuth) {
     const refreshed = await ensureRefreshed();
     if (refreshed) {
-      const tokens = getStoredTokens();
+      const tokens = getAuthTokens();
       if (tokens?.accessToken) {
         headers.set('Authorization', `Bearer ${tokens.accessToken}`);
       }
       res = await fetch(buildUrl(path, params), { ...init, headers });
+    } else {
+      handleSessionExpired();
     }
   }
 
@@ -172,8 +165,8 @@ export function syncAuthCookie(accessToken: string | null) {
 }
 
 export const apiClient = {
-  get: <T>(path: string, params?: RequestOptions['params']) =>
-    api<T>(path, { method: 'GET', params }),
+  get: <T>(path: string, params?: RequestOptions['params'], opts?: RequestOptions) =>
+    api<T>(path, { method: 'GET', params, ...opts }),
   post: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
     api<T>(path, {
       method: 'POST',
@@ -182,5 +175,6 @@ export const apiClient = {
     }),
   patch: <T>(path: string, body?: unknown) =>
     api<T>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
-  delete: <T>(path: string) => api<T>(path, { method: 'DELETE' }),
+  delete: <T>(path: string, opts?: RequestOptions) =>
+    api<T>(path, { method: 'DELETE', ...opts }),
 };

@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { z } from 'zod';
-import { EntityType } from '@vibe-crm/shared';
+import { EntityType, PERMISSIONS } from '@vibe-crm/shared';
 import { RemindersService } from './reminders.service';
-import { WorkspaceId } from '../common/decorators';
+import { RequirePermissions, WorkspaceId } from '../common/decorators';
 import { ZodValidationPipe } from '../common/zod.pipe';
 import {
   createReminderSchema,
@@ -25,6 +25,7 @@ export class RemindersController {
   constructor(private reminders: RemindersService) {}
 
   @Get()
+  @RequirePermissions(PERMISSIONS.REMINDERS_READ)
   list(
     @WorkspaceId() workspaceId: string,
     @Query(new ZodValidationPipe(reminderListSchema)) query: unknown,
@@ -36,11 +37,13 @@ export class RemindersController {
   }
 
   @Get(':id')
+  @RequirePermissions(PERMISSIONS.REMINDERS_READ)
   getOne(@WorkspaceId() workspaceId: string, @Param('id') id: string) {
     return this.reminders.getOne(workspaceId, id);
   }
 
   @Post()
+  @RequirePermissions(PERMISSIONS.REMINDERS_CREATE)
   create(
     @WorkspaceId() workspaceId: string,
     @Body(new ZodValidationPipe(createReminderSchema)) body: unknown,
@@ -52,6 +55,7 @@ export class RemindersController {
   }
 
   @Patch(':id')
+  @RequirePermissions(PERMISSIONS.REMINDERS_UPDATE)
   update(
     @WorkspaceId() workspaceId: string,
     @Param('id') id: string,
@@ -65,6 +69,7 @@ export class RemindersController {
   }
 
   @Delete(':id')
+  @RequirePermissions(PERMISSIONS.REMINDERS_DELETE)
   remove(@WorkspaceId() workspaceId: string, @Param('id') id: string) {
     return this.reminders.remove(workspaceId, id);
   }

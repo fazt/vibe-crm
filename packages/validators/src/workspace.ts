@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MemberRole } from '@vibe-crm/shared';
+import { WorkspaceRoleSlug } from '@vibe-crm/shared';
 
 export const createWorkspaceSchema = z.object({
   name: z.string().min(1).max(100),
@@ -15,7 +15,9 @@ export const updateWorkspaceSchema = createWorkspaceSchema.partial();
 
 export const inviteMemberSchema = z.object({
   email: z.string().email(),
-  role: z.nativeEnum(MemberRole).default(MemberRole.MEMBER),
+  roleSlug: z
+    .enum([WorkspaceRoleSlug.ADMIN, WorkspaceRoleSlug.MEMBER])
+    .default(WorkspaceRoleSlug.MEMBER),
 });
 
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;

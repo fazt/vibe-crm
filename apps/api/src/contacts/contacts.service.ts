@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PlanLimitsService } from '../rbac/plan-limits.service';
 import { paginate, skipTake } from '../common/pagination';
 import type { CreateContactInput, PaginationInput } from '@vibe-crm/validators';
 
@@ -10,7 +11,10 @@ export interface ContactListQuery extends PaginationInput {
 
 @Injectable()
 export class ContactsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private planLimits: PlanLimitsService,
+  ) {}
 
   private include = {
     client: { select: { id: true, name: true } },
@@ -60,7 +64,9 @@ export class ContactsService {
     return contact;
   }
 
-  async create(workspaceId: string, data: CreateContactInput) {
+  async create(workspaceId: string, userId: string, data: CreateContactInput) {
+    const count = await this.prisma.contact.count({ where: { workspaceId } });
+    await this.planLimits.assertCanCreate(userId, workspaceId, 'contacts', count);
     return this.prisma.contact.create({
       data: { ...data, workspaceId },
       include: this.include,

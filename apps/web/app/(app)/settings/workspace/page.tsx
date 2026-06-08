@@ -20,14 +20,18 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { fetchCurrentUser } from '@/stores/auth-store';
+import { usePermissions } from '@/hooks/use-permissions';
+import { PlanUsageMeter } from '@/components/plan-usage-meter';
 import { getInitials } from '@/lib/utils';
+import { PERMISSIONS, type RoleInfo } from '@vibe-crm/shared';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const labelClass = 'studio-label';
 
 interface Member {
   id: string;
-  role: string;
+  role: RoleInfo;
   user: {
     id: string;
     email: string;
@@ -38,6 +42,7 @@ interface Member {
 }
 
 export default function WorkspaceSettingsPage() {
+  const { user, usage, planLimits, can } = usePermissions();
   const current = useCurrentWorkspace();
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const fetchWorkspaces = useWorkspaceStore((s) => s.fetchWorkspaces);
@@ -90,9 +95,16 @@ export default function WorkspaceSettingsPage() {
             <div>
               <p className="font-medium">{current.name}</p>
               <p className="font-mono text-[11px] text-muted-foreground">{current.slug}</p>
-              <Badge variant="outline" className="mt-2 capitalize">
-                {current.role.toLowerCase()}
-              </Badge>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {user?.role && (
+                  <Badge variant="secondary" className="capitalize text-[10px]">
+                    {user.role.slug} (platform)
+                  </Badge>
+                )}
+                <Badge variant="outline" className="capitalize text-[10px]">
+                  {current.role.slug} (workspace)
+                </Badge>
+              </div>
             </div>
           ) : (
             <p className="text-[11px] text-muted-foreground">No workspace selected</p>
@@ -109,7 +121,10 @@ export default function WorkspaceSettingsPage() {
                   variant={ws.id === current?.id ? 'secondary' : 'ghost'}
                   size="sm"
                   className="w-full justify-start text-xs"
-                  onClick={() => setCurrentWorkspace(ws.id)}
+                  onClick={() => {
+                    setCurrentWorkspace(ws.id);
+                    void fetchCurrentUser();
+                  }}
                 >
                   {ws.name}
                 </Button>
@@ -143,7 +158,7 @@ export default function WorkspaceSettingsPage() {
                     <p className="truncate font-mono text-[11px] text-muted-foreground">{m.user.email}</p>
                   </div>
                   <Badge variant="outline" className="capitalize text-[10px]">
-                    {m.role.toLowerCase()}
+                    {m.role.slug}
                   </Badge>
                 </li>
               ))}
@@ -152,6 +167,11 @@ export default function WorkspaceSettingsPage() {
         </div>
       </Surface>
 
+      {usage && planLimits && (
+        <PlanUsageMeter label="Workspaces" current={usage.workspaces} limit={planLimits.workspaces} />
+      )}
+
+      {can(PERMISSIONS.WORKSPACES_CREATE) && (
       <Surface padding="none">
         <SurfaceHeader>
           <h2 className="text-sm font-medium">Create workspace</h2>
@@ -198,6 +218,7 @@ export default function WorkspaceSettingsPage() {
           </Form>
         </div>
       </Surface>
+      )}
     </div>
   );
 }

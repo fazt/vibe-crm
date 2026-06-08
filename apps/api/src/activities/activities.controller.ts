@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { z } from 'zod';
+import { PERMISSIONS } from '@vibe-crm/shared';
 import { ActivitiesService } from './activities.service';
-import { CurrentUser, WorkspaceId } from '../common/decorators';
+import { CurrentUser, RequirePermissions, WorkspaceId } from '../common/decorators';
 import { ZodValidationPipe } from '../common/zod.pipe';
 import {
   createActivitySchema,
@@ -20,6 +21,7 @@ export class ActivitiesController {
   constructor(private activities: ActivitiesService) {}
 
   @Get()
+  @RequirePermissions(PERMISSIONS.ACTIVITIES_READ)
   list(
     @WorkspaceId() workspaceId: string,
     @Query(new ZodValidationPipe(activityListSchema)) query: unknown,
@@ -31,11 +33,13 @@ export class ActivitiesController {
   }
 
   @Get(':id')
+  @RequirePermissions(PERMISSIONS.ACTIVITIES_READ)
   getOne(@WorkspaceId() workspaceId: string, @Param('id') id: string) {
     return this.activities.getOne(workspaceId, id);
   }
 
   @Post()
+  @RequirePermissions(PERMISSIONS.ACTIVITIES_CREATE)
   create(
     @WorkspaceId() workspaceId: string,
     @CurrentUser('id') authorId: string,
@@ -49,6 +53,7 @@ export class ActivitiesController {
   }
 
   @Patch(':id')
+  @RequirePermissions(PERMISSIONS.ACTIVITIES_UPDATE)
   update(
     @WorkspaceId() workspaceId: string,
     @Param('id') id: string,
@@ -62,6 +67,7 @@ export class ActivitiesController {
   }
 
   @Delete(':id')
+  @RequirePermissions(PERMISSIONS.ACTIVITIES_DELETE)
   remove(@WorkspaceId() workspaceId: string, @Param('id') id: string) {
     return this.activities.remove(workspaceId, id);
   }

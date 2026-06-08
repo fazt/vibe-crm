@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EntityType } from '@vibe-crm/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { PlanLimitsService } from '../rbac/plan-limits.service';
 import { paginate, skipTake } from '../common/pagination';
 import type { CreateClientInput, PaginationInput } from '@vibe-crm/validators';
 import { clientFilterSchema } from '@vibe-crm/validators';
@@ -10,7 +11,10 @@ type ClientFilters = z.infer<typeof clientFilterSchema>;
 
 @Injectable()
 export class ClientsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private planLimits: PlanLimitsService,
+  ) {}
 
   private clientInclude = {
     company: { select: { id: true, name: true } },
@@ -101,7 +105,9 @@ export class ClientsService {
     return withTags;
   }
 
-  async create(workspaceId: string, data: CreateClientInput) {
+  async create(workspaceId: string, userId: string, data: CreateClientInput) {
+    const count = await this.prisma.client.count({ where: { workspaceId } });
+    await this.planLimits.assertCanCreate(userId, workspaceId, 'clients', count);
     const { tagIds, ...clientData } = data;
     const client = await this.prisma.client.create({
       data: { ...clientData, workspaceId },

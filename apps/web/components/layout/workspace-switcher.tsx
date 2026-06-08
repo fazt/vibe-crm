@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import { fetchCurrentUser } from '@/stores/auth-store';
 import { useWorkspaceStore, useCurrentWorkspace } from '@/stores/workspace-store';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,7 +43,7 @@ export function WorkspaceSwitcher({ collapsed }: WorkspaceSwitcherProps) {
           variant="outline"
           size="sm"
           className={cn(
-            'w-full justify-between rounded-lg studio-inset text-xs font-normal hover:bg-stone-950/70',
+            'w-full justify-between rounded-lg studio-inset text-xs font-normal hover:bg-muted/70',
             collapsed && 'h-8 w-8 px-0',
           )}
         >
@@ -62,7 +63,10 @@ export function WorkspaceSwitcher({ collapsed }: WorkspaceSwitcherProps) {
         {workspaces.map((ws) => (
           <DropdownMenuItem
             key={ws.id}
-            onClick={() => setCurrentWorkspace(ws.id)}
+            onClick={() => {
+              setCurrentWorkspace(ws.id);
+              void fetchCurrentUser();
+            }}
             className="text-xs"
           >
             <span className="flex-1 truncate">{ws.name}</span>

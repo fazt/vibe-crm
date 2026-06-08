@@ -12,3 +12,5 @@ export * from './reminder';
 export * from './tag';
 export * from './document';
 export * from './contact-form';
+export * from './billing';
+export * from './admin';

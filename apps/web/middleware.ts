@@ -8,8 +8,19 @@ const publicPaths = [
   '/register',
   '/forgot-password',
   '/reset-password',
+  '/github/callback',
 ];
 const authPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
+
+function isAccessTokenExpired(token: string) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1] ?? '')) as { exp?: number };
+    if (!payload.exp) return true;
+    return payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
 
 const protectedPrefixes = [
   '/dashboard',
@@ -38,10 +49,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  if (isProtected && !token) {
+  if (isProtected && (!token || isAccessTokenExpired(token))) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    if (token && isAccessTokenExpired(token)) {
+      response.cookies.set('vibe-access-token', '', { path: '/', maxAge: 0 });
+    }
+    return response;
   }
 
   if (isAuthPage && token) {

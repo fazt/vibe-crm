@@ -1,7 +1,21 @@
-export enum MemberRole {
-  OWNER = 'OWNER',
-  ADMIN = 'ADMIN',
-  MEMBER = 'MEMBER',
+export enum RoleScope {
+  PLATFORM = 'PLATFORM',
+  WORKSPACE = 'WORKSPACE',
+}
+
+export enum SubscriptionPlan {
+  SOLO = 'SOLO',
+  STUDIO = 'STUDIO',
+  AGENCY = 'AGENCY',
+}
+
+export enum SubscriptionStatus {
+  NONE = 'NONE',
+  TRIALING = 'TRIALING',
+  ACTIVE = 'ACTIVE',
+  PAST_DUE = 'PAST_DUE',
+  CANCELED = 'CANCELED',
+  UNPAID = 'UNPAID',
 }
 
 export enum ClientStatus {

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/auth-store';
+import { fetchCurrentUser, useAuthStore } from '@/stores/auth-store';
 import { useWorkspaceStore } from '@/stores/workspace-store';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
@@ -14,6 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const accessToken = useAuthStore((s) => s.accessToken);
   const fetchWorkspaces = useWorkspaceStore((s) => s.fetchWorkspaces);
+  const currentWorkspaceId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const workspaceHydrated = useWorkspaceStore((s) => s.isHydrated);
 
   useEffect(() => {
@@ -23,10 +24,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [isHydrated, accessToken, router]);
 
   useEffect(() => {
-    if (isHydrated && accessToken) {
-      fetchWorkspaces().catch(() => undefined);
-    }
+    if (!isHydrated || !accessToken) return;
+    fetchWorkspaces()
+      .then(() => fetchCurrentUser())
+      .catch(() => undefined);
   }, [isHydrated, accessToken, fetchWorkspaces]);
+
+  useEffect(() => {
+    if (!isHydrated || !accessToken || !workspaceHydrated || !currentWorkspaceId) return;
+    fetchCurrentUser().catch(() => undefined);
+  }, [currentWorkspaceId, workspaceHydrated, isHydrated, accessToken]);
 
   if (!isHydrated || !workspaceHydrated) {
     return (

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { TaskStatus } from '@vibe-crm/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { PlanLimitsService } from '../rbac/plan-limits.service';
 import { paginate, skipTake } from '../common/pagination';
 import type { CreateTaskInput, PaginationInput } from '@vibe-crm/validators';
 
@@ -13,7 +14,10 @@ export interface TaskListQuery extends PaginationInput {
 
 @Injectable()
 export class TasksService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private planLimits: PlanLimitsService,
+  ) {}
 
   private include = {
     client: { select: { id: true, name: true } },
@@ -64,7 +68,9 @@ export class TasksService {
     return task;
   }
 
-  async create(workspaceId: string, data: CreateTaskInput) {
+  async create(workspaceId: string, userId: string, data: CreateTaskInput) {
+    const count = await this.prisma.task.count({ where: { workspaceId } });
+    await this.planLimits.assertCanCreate(userId, workspaceId, 'tasks', count);
     return this.prisma.task.create({
       data: { ...data, workspaceId },
       include: this.include,

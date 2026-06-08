@@ -4,6 +4,58 @@ All notable changes to Vibe CRM are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).  
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-06-09
+
+RBAC, Stripe billing, avatar uploads, and realtime Kanban updates.
+
+### Added
+
+#### Platform & RBAC
+- Granular permission system (`packages/shared/src/permissions.ts`) with platform and workspace scopes
+- Prisma migration `rbac_and_subscriptions`: roles, permissions, plan subscriptions, usage tracking
+- `seed-rbac.ts` and expanded demo seed with role assignments
+- Permission guards on API controllers; `@RequirePermissions` / `@SkipWorkspace` decorators
+
+#### Billing (Stripe)
+- Checkout sessions, customer portal, plan catalog, and webhook handling
+- Plan limits enforcement (workspaces, clients, contacts, members, etc.)
+- Billing settings page and dynamic marketing pricing from `GET /billing/plans`
+- `PlanUsageMeter` on workspace and contacts settings
+
+#### Admin
+- Superadmin routes: user CRUD, role management, permission assignment
+- Admin UI under `/settings/admin/users` and `/settings/admin/roles`
+
+#### Avatars & storage
+- Profile avatar upload flow: presign → PUT to Spaces → confirm
+- Public-read ACL on avatar uploads so images render in UI
+- `AvatarUpload` component; avatar shown in profile and topbar
+- Spaces CORS / `SPACES_PUBLIC_URL` documented in `.env.example`
+
+#### Realtime
+- Socket.IO gateway for workspace-scoped events (Kanban live updates)
+- `useWorkspaceSocket` hook and opportunity board integration
+
+#### Frontend
+- Light / dark / system theme (`ThemeProvider`, `ThemeToggle`)
+- Opportunities page split into server shell + `page-client` with Kanban and detail dialog
+- Auth token helpers (`lib/auth-tokens.ts`) and improved API refresh handling
+- Cloudflare tunnel script and `.cloudflared/config.example.yml`
+
+#### Tooling
+- Agent skills: `my-commit`, `my-review`
+- `scripts/test-roles.mjs` and `scripts/test-all-roles.ps1`
+
+### Changed
+- `/users/me` returns permissions, plan, limits, and usage alongside profile
+- Profile name updates no longer accept `avatarUrl` via PATCH (dedicated avatar endpoints only)
+- Marketing pricing page fetches plans from API instead of hardcoded tiers
+- README environment variable table aligned with `.env.example`
+- `.gitignore`: `*.tsbuildinfo`, Playwright artifacts
+
+### Fixed
+- Avatar images not displaying after upload (Spaces returned 403 without `public-read` ACL)
+
 ## [0.1.0] — 2026-06-08
 
 First public release (`vibe-crm@0.1.0`): full CRM core, marketing site, and transactional email for contact.
@@ -54,4 +106,5 @@ First public release (`vibe-crm@0.1.0`): full CRM core, marketing site, and tran
 - DigitalOcean Spaces upload requires credentials; works without them only where uploads are skipped
 - GitHub OAuth requires `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` to be configured
 
+[0.2.0]: https://github.com/fazt/vibe-crm/releases/tag/v0.2.0
 [0.1.0]: https://github.com/fazt/vibe-crm/releases/tag/v0.1.0

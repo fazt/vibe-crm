@@ -7,10 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum MemberRole {
-  OWNER
-  ADMIN
-  MEMBER
+enum RoleScope {
+  PLATFORM
+  WORKSPACE
+}
+
+enum SubscriptionPlan {
+  SOLO
+  STUDIO
+  AGENCY
+}
+
+enum SubscriptionStatus {
+  NONE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
 }
 
 enum ClientStatus {
@@ -73,17 +87,89 @@ enum OpportunityStatus {
   LOST
 }
 
-model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String?
-  githubId     String?  @unique
-  firstName    String
-  lastName     String
-  avatarUrl    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+model Role {
+  id          String    @id @default(uuid())
+  slug        String
+  name        String
+  description String?
+  scope       RoleScope
+  isSystem    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
+  permissions RolePermission[]
+  users       User[]
+  members     WorkspaceMember[]
+
+  @@unique([scope, slug])
+  @@index([scope])
+}
+
+model Permission {
+  id          String    @id @default(uuid())
+  key         String    @unique
+  name        String
+  description String?
+  scope       RoleScope
+  createdAt   DateTime  @default(now())
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  userId               String             @unique
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  stripePriceId        String?
+  plan                 SubscriptionPlan   @default(SOLO)
+  status               SubscriptionStatus @default(NONE)
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  trialEndsAt          DateTime?
+  hadTrial             Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([plan])
+}
+
+model StripeWebhookEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+}
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  passwordHash     String?
+  githubId         String?  @unique
+  firstName        String
+  lastName         String
+  avatarUrl        String?
+  roleId           String
+  stripeCustomerId String?  @unique
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  role              Role          @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  subscription      Subscription?
   memberships       WorkspaceMember[]
   refreshTokens     RefreshToken[]
   passwordResets    PasswordReset[]
@@ -146,17 +232,19 @@ model Workspace {
 }
 
 model WorkspaceMember {
-  id          String     @id @default(uuid())
+  id          String   @id @default(uuid())
   workspaceId String
   userId      String
-  role        MemberRole @default(MEMBER)
-  joinedAt    DateTime   @default(now())
+  roleId      String
+  joinedAt    DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
   @@unique([workspaceId, userId])
   @@index([userId])
+  @@index([roleId])
 }
 
 model Company {

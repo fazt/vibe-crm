@@ -1,7 +1,7 @@
 {
   "name": "vibe-crm",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
@@ -9,7 +9,8 @@
     "db:generate": "pnpm --filter @vibe-crm/database generate",
     "db:migrate": "pnpm --filter @vibe-crm/database migrate",
     "db:seed": "pnpm --filter @vibe-crm/database seed",
-    "db:studio": "pnpm --filter @vibe-crm/database studio"
+    "db:studio": "pnpm --filter @vibe-crm/database studio",
+    "tunnel:api": "cloudflared tunnel --url http://localhost:4000"
   },
   "devDependencies": {
     "turbo": "^2.5.4",

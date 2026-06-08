@@ -75,7 +75,7 @@ export class SearchService {
         id: o.id,
         title: o.title,
         subtitle: o.value > 0 ? `$${o.value.toLocaleString()}` : undefined,
-        url: `/opportunities/${o.id}`,
+        url: `/opportunities?id=${o.id}`,
       })),
       ...tasks.map((t) => ({
         type: 'task',

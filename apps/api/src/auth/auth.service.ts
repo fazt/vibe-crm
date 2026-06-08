@@ -4,38 +4,75 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { SubscriptionPlan, SubscriptionStatus } from '@vibe-crm/database';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-import { PrismaService } from '../prisma/prisma.service';
-import { DEFAULT_PIPELINE_STAGES } from '@vibe-crm/shared';
+import { DEFAULT_PIPELINE_STAGES, PlatformRoleSlug, WorkspaceRoleSlug } from '@vibe-crm/shared';
 import { sendEmail, welcomeEmail, passwordResetEmail } from '@vibe-crm/emails';
 import type { RegisterInput, LoginInput } from '@vibe-crm/validators';
+import { PrismaService } from '../prisma/prisma.service';
+import { RbacService } from '../rbac/rbac.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
+    private rbac: RbacService,
   ) {}
 
   private hashToken(token: string) {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
+  private jwtSecret() {
+    return process.env.JWT_ACCESS_SECRET ?? 'dev-access-secret-change-me-32chars';
+  }
+
+  private parseDurationMs(value: string): number {
+    const match = /^(\d+)([smhd])$/.exec(value.trim());
+    if (!match) return 7 * 24 * 60 * 60 * 1000;
+    const amount = Number(match[1]);
+    const unit = match[2];
+    const multipliers: Record<string, number> = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+    return amount * (multipliers[unit] ?? 86_400_000);
+  }
+
   private async generateTokens(userId: string, email: string) {
     const accessToken = this.jwt.sign(
       { sub: userId, email },
       {
-        secret: process.env.JWT_ACCESS_SECRET,
+        secret: this.jwtSecret(),
         expiresIn: (process.env.JWT_ACCESS_EXPIRES ?? '15m') as `${number}m`,
       },
     );
     const refreshToken = crypto.randomBytes(40).toString('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const refreshExpires = process.env.JWT_REFRESH_EXPIRES ?? '7d';
+    const expiresAt = new Date(Date.now() + this.parseDurationMs(refreshExpires));
     await this.prisma.refreshToken.create({
       data: { userId, tokenHash: this.hashToken(refreshToken), expiresAt },
     });
     return { accessToken, refreshToken };
+  }
+
+  private async buildAuthUser(userId: string) {
+    const ctx = await this.rbac.loadUserAuthContext(userId);
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { id: true, email: true, firstName: true, lastName: true, avatarUrl: true },
+    });
+    return {
+      ...user,
+      role: ctx.role,
+      permissions: ctx.platformPermissions,
+      platformPermissions: ctx.platformPermissions,
+      workspacePermissions: [],
+      plan: ctx.plan,
+      planLimits: ctx.planLimits,
+      usage: ctx.usage,
+      isSubscriber: ctx.isSubscriber,
+      isSuperAdmin: ctx.isSuperAdmin,
+    };
   }
 
   async register(dto: RegisterInput) {
@@ -48,37 +85,43 @@ export class AuthService {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
 
+    const userRoleId = await this.rbac.getPlatformRoleId(PlatformRoleSlug.USER);
+    const ownerRoleId = await this.rbac.getWorkspaceRoleId(WorkspaceRoleSlug.OWNER);
+
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
         passwordHash,
         firstName: dto.firstName,
         lastName: dto.lastName,
-        memberships: {
-          create: {
-            role: 'OWNER',
-            workspace: {
-              create: {
-                name: dto.workspaceName ?? `${dto.firstName}'s Workspace`,
-                slug: `${slug}-${Date.now().toString(36)}`,
-                pipelineStages: {
-                  create: DEFAULT_PIPELINE_STAGES.map((s) => ({
-                    name: s.name,
-                    color: s.color,
-                    order: s.order,
-                    isWon: s.isWon,
-                    isLost: s.isLost,
-                  })),
-                },
-              },
-            },
-          },
+        roleId: userRoleId,
+        subscription: {
+          create: { plan: SubscriptionPlan.SOLO, status: SubscriptionStatus.NONE },
         },
       },
-      include: { memberships: { include: { workspace: true } } },
     });
 
-    const workspace = user.memberships[0].workspace;
+    const workspace = await this.prisma.workspace.create({
+      data: {
+        name: dto.workspaceName ?? `${dto.firstName}'s Workspace`,
+        slug: `${slug}-${Date.now().toString(36)}`,
+        pipelineStages: {
+          create: DEFAULT_PIPELINE_STAGES.map((s) => ({
+            name: s.name,
+            color: s.color,
+            order: s.order,
+            isWon: s.isWon,
+            isLost: s.isLost,
+          })),
+        },
+        members: {
+          create: { userId: user.id, roleId: ownerRoleId },
+        },
+      },
+      include: { members: { include: { role: true } } },
+    });
+
+    const membership = workspace.members[0];
     await sendEmail({
       to: user.email,
       subject: 'Welcome to Vibe CRM',
@@ -86,14 +129,19 @@ export class AuthService {
     });
 
     const tokens = await this.generateTokens(user.id, user.email);
+    const authUser = await this.buildAuthUser(user.id);
     return {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+      user: authUser,
+      workspace: {
+        id: workspace.id,
+        name: workspace.name,
+        slug: workspace.slug,
+        role: {
+          id: membership.role.id,
+          slug: membership.role.slug,
+          name: membership.role.name,
+        },
       },
-      workspace: { id: workspace.id, name: workspace.name, slug: workspace.slug },
       ...tokens,
     };
   }
@@ -180,6 +228,9 @@ export class AuthService {
         },
       });
     } else {
+      const userRoleId = await this.rbac.getPlatformRoleId(PlatformRoleSlug.USER);
+      const ownerRoleId = await this.rbac.getWorkspaceRoleId(WorkspaceRoleSlug.OWNER);
+
       user = await this.prisma.user.create({
         data: {
           email: primaryEmail,
@@ -187,25 +238,28 @@ export class AuthService {
           firstName,
           lastName,
           avatarUrl: profile.avatar_url,
-          memberships: {
-            create: {
-              role: 'OWNER',
-              workspace: {
-                create: {
-                  name: `${firstName}'s Workspace`,
-                  slug: `${profile.login.toLowerCase()}-${Date.now().toString(36)}`,
-                  pipelineStages: {
-                    create: DEFAULT_PIPELINE_STAGES.map((s) => ({
-                      name: s.name,
-                      color: s.color,
-                      order: s.order,
-                      isWon: s.isWon,
-                      isLost: s.isLost,
-                    })),
-                  },
-                },
-              },
-            },
+          roleId: userRoleId,
+          subscription: {
+            create: { plan: SubscriptionPlan.SOLO, status: SubscriptionStatus.NONE },
+          },
+        },
+      });
+
+      await this.prisma.workspace.create({
+        data: {
+          name: `${firstName}'s Workspace`,
+          slug: `${profile.login.toLowerCase()}-${Date.now().toString(36)}`,
+          pipelineStages: {
+            create: DEFAULT_PIPELINE_STAGES.map((s) => ({
+              name: s.name,
+              color: s.color,
+              order: s.order,
+              isWon: s.isWon,
+              isLost: s.isLost,
+            })),
+          },
+          members: {
+            create: { userId: user.id, roleId: ownerRoleId },
           },
         },
       });
@@ -216,7 +270,7 @@ export class AuthService {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     });
-    return `${webUrl}/auth/github/callback?${params.toString()}`;
+    return `${webUrl}/github/callback?${params.toString()}`;
   }
 
   async login(dto: LoginInput) {
@@ -225,16 +279,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
     const tokens = await this.generateTokens(user.id, user.email);
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatarUrl: user.avatarUrl,
-      },
-      ...tokens,
-    };
+    const authUser = await this.buildAuthUser(user.id);
+    return { user: authUser, ...tokens };
   }
 
   async refresh(refreshToken: string) {

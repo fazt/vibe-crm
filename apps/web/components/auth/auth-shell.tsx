@@ -17,7 +17,7 @@ export function AuthShell({ title, description, children, footer, className }: A
         <div className="space-y-4">
           <LogoMark size="md" />
           <div className="space-y-2">
-            <h1 className="text-lg font-semibold tracking-tight text-amber-50/95">{title}</h1>
+            <h1 className="text-lg font-semibold tracking-tight text-foreground">{title}</h1>
             {description && (
               <p className="text-[12px] leading-relaxed text-muted-foreground">{description}</p>
             )}
@@ -33,9 +33,9 @@ export function AuthShell({ title, description, children, footer, className }: A
 export function AuthDivider() {
   return (
     <div className="flex items-center gap-3">
-      <div className="h-px flex-1 bg-amber-950/40" />
+      <div className="h-px flex-1 bg-border" />
       <span className="studio-label">or</span>
-      <div className="h-px flex-1 bg-amber-950/40" />
+      <div className="h-px flex-1 bg-border" />
     </div>
   );
 }

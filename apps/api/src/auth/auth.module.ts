@@ -7,9 +7,12 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { WorkspaceGuard } from './workspace.guard';
+import { PermissionsGuard } from './permissions.guard';
+import { RbacModule } from '../rbac/rbac.module';
 
 @Module({
   imports: [
+    RbacModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET ?? 'dev-access-secret-change-me-32chars',
@@ -21,7 +24,8 @@ import { WorkspaceGuard } from './workspace.guard';
     JwtStrategy,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: WorkspaceGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
-  exports: [AuthService],
+  exports: [AuthService, RbacModule],
 })
 export class AuthModule {}

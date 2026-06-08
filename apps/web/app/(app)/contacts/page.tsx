@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import type { PaginatedResponse } from '@vibe-crm/shared';
+import { PERMISSIONS } from '@vibe-crm/shared';
 import { apiClient } from '@/lib/api';
+import { usePermissions } from '@/hooks/use-permissions';
+import { PlanUsageMeter } from '@/components/plan-usage-meter';
 import { PageHeader } from '@/components/page-header';
 import { DataTable, Column } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
@@ -36,6 +39,7 @@ const columns: Column<ContactRow>[] = [
 ];
 
 export default function ContactsPage() {
+  const { can, usage, planLimits } = usePermissions();
   const [data, setData] = useState<ContactRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -70,14 +74,21 @@ export default function ContactsPage() {
         title="Contacts"
         description="People across your clients and companies"
         actions={
-          <Button asChild size="sm">
-            <Link href="/contacts/new">
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              New contact
-            </Link>
-          </Button>
+          can(PERMISSIONS.CONTACTS_CREATE) ? (
+            <Button asChild size="sm">
+              <Link href="/contacts/new">
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                New contact
+              </Link>
+            </Button>
+          ) : undefined
         }
       />
+      {usage && planLimits && (
+        <div className="mb-4">
+          <PlanUsageMeter label="Contacts" current={usage.contacts} limit={planLimits.contacts} />
+        </div>
+      )}
       <DataTable
         columns={columns}
         data={data}

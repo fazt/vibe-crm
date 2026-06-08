@@ -15,11 +15,11 @@ export function PageHeader({ title, description, label, actions, className }: Pa
       <div className="space-y-1.5">
         {label && (
           <p className="studio-label flex items-center gap-2">
-            <span className="h-1 w-1 rounded-full bg-amber-500/70" />
+            <span className="h-1 w-1 rounded-full bg-primary/70" />
             {label}
           </p>
         )}
-        <h1 className="text-xl font-semibold tracking-tight text-amber-50/95">{title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
         {description && (
           <p className="max-w-xl text-[12px] leading-relaxed text-muted-foreground">{description}</p>
         )}

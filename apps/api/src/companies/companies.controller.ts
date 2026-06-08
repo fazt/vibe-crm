@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { PERMISSIONS } from '@vibe-crm/shared';
 import { CompaniesService } from './companies.service';
-import { WorkspaceId } from '../common/decorators';
+import { RequirePermissions, WorkspaceId } from '../common/decorators';
 import { ZodValidationPipe } from '../common/zod.pipe';
 import {
   createCompanySchema,
@@ -13,6 +14,7 @@ export class CompaniesController {
   constructor(private companies: CompaniesService) {}
 
   @Get()
+  @RequirePermissions(PERMISSIONS.COMPANIES_READ)
   list(
     @WorkspaceId() workspaceId: string,
     @Query(new ZodValidationPipe(paginationSchema)) query: unknown,
@@ -24,11 +26,13 @@ export class CompaniesController {
   }
 
   @Get(':id')
+  @RequirePermissions(PERMISSIONS.COMPANIES_READ)
   getOne(@WorkspaceId() workspaceId: string, @Param('id') id: string) {
     return this.companies.getOne(workspaceId, id);
   }
 
   @Post()
+  @RequirePermissions(PERMISSIONS.COMPANIES_CREATE)
   create(
     @WorkspaceId() workspaceId: string,
     @Body(new ZodValidationPipe(createCompanySchema)) body: unknown,
@@ -40,6 +44,7 @@ export class CompaniesController {
   }
 
   @Patch(':id')
+  @RequirePermissions(PERMISSIONS.COMPANIES_UPDATE)
   update(
     @WorkspaceId() workspaceId: string,
     @Param('id') id: string,
@@ -53,6 +58,7 @@ export class CompaniesController {
   }
 
   @Delete(':id')
+  @RequirePermissions(PERMISSIONS.COMPANIES_DELETE)
   remove(@WorkspaceId() workspaceId: string, @Param('id') id: string) {
     return this.companies.remove(workspaceId, id);
   }

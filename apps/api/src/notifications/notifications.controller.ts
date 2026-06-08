@@ -1,7 +1,8 @@
 import { Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { z } from 'zod';
+import { PERMISSIONS } from '@vibe-crm/shared';
 import { NotificationsService } from './notifications.service';
-import { CurrentUser, WorkspaceId } from '../common/decorators';
+import { CurrentUser, RequirePermissions, WorkspaceId } from '../common/decorators';
 import { ZodValidationPipe } from '../common/zod.pipe';
 import { paginationSchema } from '@vibe-crm/validators';
 
@@ -17,6 +18,7 @@ export class NotificationsController {
   constructor(private notifications: NotificationsService) {}
 
   @Get()
+  @RequirePermissions(PERMISSIONS.NOTIFICATIONS_READ)
   list(
     @WorkspaceId() workspaceId: string,
     @CurrentUser('id') userId: string,
@@ -30,6 +32,7 @@ export class NotificationsController {
   }
 
   @Patch('read-all')
+  @RequirePermissions(PERMISSIONS.NOTIFICATIONS_UPDATE)
   markAllRead(
     @WorkspaceId() workspaceId: string,
     @CurrentUser('id') userId: string,
@@ -38,6 +41,7 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
+  @RequirePermissions(PERMISSIONS.NOTIFICATIONS_UPDATE)
   markRead(
     @WorkspaceId() workspaceId: string,
     @CurrentUser('id') userId: string,

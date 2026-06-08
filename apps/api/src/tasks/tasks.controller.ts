@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { z } from 'zod';
-import { TaskStatus } from '@vibe-crm/shared';
+import { PERMISSIONS, TaskStatus } from '@vibe-crm/shared';
 import { TasksService } from './tasks.service';
-import { WorkspaceId } from '../common/decorators';
+import { CurrentUser, RequirePermissions, WorkspaceId } from '../common/decorators';
 import { ZodValidationPipe } from '../common/zod.pipe';
 import {
   createTaskSchema,
@@ -22,6 +22,7 @@ export class TasksController {
   constructor(private tasks: TasksService) {}
 
   @Get()
+  @RequirePermissions(PERMISSIONS.TASKS_READ)
   list(
     @WorkspaceId() workspaceId: string,
     @Query(new ZodValidationPipe(taskListSchema)) query: unknown,
@@ -33,22 +34,27 @@ export class TasksController {
   }
 
   @Get(':id')
+  @RequirePermissions(PERMISSIONS.TASKS_READ)
   getOne(@WorkspaceId() workspaceId: string, @Param('id') id: string) {
     return this.tasks.getOne(workspaceId, id);
   }
 
   @Post()
+  @RequirePermissions(PERMISSIONS.TASKS_CREATE)
   create(
     @WorkspaceId() workspaceId: string,
+    @CurrentUser('id') userId: string,
     @Body(new ZodValidationPipe(createTaskSchema)) body: unknown,
   ) {
     return this.tasks.create(
       workspaceId,
-      body as Parameters<TasksService['create']>[1],
+      userId,
+      body as Parameters<TasksService['create']>[2],
     );
   }
 
   @Patch(':id')
+  @RequirePermissions(PERMISSIONS.TASKS_UPDATE)
   update(
     @WorkspaceId() workspaceId: string,
     @Param('id') id: string,
@@ -62,6 +68,7 @@ export class TasksController {
   }
 
   @Delete(':id')
+  @RequirePermissions(PERMISSIONS.TASKS_DELETE)
   remove(@WorkspaceId() workspaceId: string, @Param('id') id: string) {
     return this.tasks.remove(workspaceId, id);
   }

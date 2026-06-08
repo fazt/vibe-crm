@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { getInitials } from '@/lib/utils';
 import Link from 'next/link';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 interface Notification {
   id: string;
@@ -52,22 +53,23 @@ export function Topbar() {
       <Button
         variant="outline"
         size="sm"
-        className="h-8 w-72 justify-start rounded-full studio-inset text-xs text-muted-foreground hover:bg-stone-950/70"
+        className="h-8 w-72 justify-start rounded-full studio-inset text-xs text-muted-foreground hover:bg-muted/80"
         onClick={() => setCommandOpen(true)}
       >
-        <Search className="mr-2 h-3.5 w-3.5 text-amber-200/40" />
+        <Search className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
         Search pipeline...
-        <kbd className="pointer-events-none ml-auto hidden rounded-md border studio-divider bg-stone-950/50 px-1.5 font-mono text-[10px] sm:inline">
+        <kbd className="pointer-events-none ml-auto hidden rounded-md border studio-divider bg-muted/60 px-1.5 font-mono text-[10px] sm:inline">
           ⌘K
         </kbd>
       </Button>
 
       <div className="flex items-center gap-1">
+        <ThemeToggle className="h-8 w-8" />
         <Button variant="ghost" size="icon" className="relative h-8 w-8" asChild>
           <Link href="/settings/profile">
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 font-mono text-[10px] font-semibold tabular-nums text-stone-950">
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 font-mono text-[10px] font-semibold tabular-nums text-primary-foreground">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -77,9 +79,9 @@ export function Topbar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="h-8 gap-2 rounded-full px-2">
-              <Avatar className="h-6 w-6 ring-1 ring-amber-900/40">
+              <Avatar className="h-6 w-6 ring-1 ring-border">
                 <AvatarImage src={user?.avatarUrl ?? undefined} />
-                <AvatarFallback className="bg-amber-950/50 text-[10px] text-amber-100">
+                <AvatarFallback className="bg-muted text-[10px] text-foreground">
                   {getInitials(user?.firstName, user?.lastName)}
                 </AvatarFallback>
               </Avatar>
@@ -88,7 +90,7 @@ export function Topbar() {
               </span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 border studio-divider bg-stone-900/95">
+          <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
               {user?.email}
             </DropdownMenuLabel>

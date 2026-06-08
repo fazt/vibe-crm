@@ -8,11 +8,13 @@ import { z } from 'zod';
 import type { AuthUser } from '@vibe-crm/shared';
 import { apiClient, ApiRequestError } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
+import { AvatarUpload } from '@/components/avatar-upload';
 import { PageHeader } from '@/components/page-header';
 import { FormSection, FormActions } from '@/components/forms/form-section';
 import { Surface, SurfaceHeader } from '@/components/ui/surface';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ThemeToggle } from '@/components/theme-toggle';
 import {
   Form,
   FormControl,
@@ -37,7 +39,7 @@ export default function ProfileSettingsPage() {
 
   const profileForm = useForm<ProfileInput>({
     resolver: formResolver<ProfileInput>(updateProfileSchema),
-    defaultValues: { firstName: '', lastName: '', avatarUrl: null },
+    defaultValues: { firstName: '', lastName: '' },
   });
 
   const passwordForm = useForm<PasswordInput>({
@@ -53,7 +55,6 @@ export default function ProfileSettingsPage() {
         profileForm.reset({
           firstName: u.firstName,
           lastName: u.lastName,
-          avatarUrl: u.avatarUrl ?? null,
         });
       })
       .catch(() => undefined);
@@ -94,7 +95,15 @@ export default function ProfileSettingsPage() {
             <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">{user?.email}</p>
           </div>
         </SurfaceHeader>
-        <div className="p-5">
+        <div className="p-5 space-y-5">
+          <AvatarUpload
+            user={user}
+            onUpdated={(updated) => {
+              if (user) setUser({ ...user, ...updated });
+              setProfileMsg('Photo updated');
+              setProfileError('');
+            }}
+          />
           <Form {...profileForm}>
             <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-5">
               <FormSection>
@@ -124,19 +133,6 @@ export default function ProfileSettingsPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={profileForm.control}
-                  name="avatarUrl"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <FormLabel className={labelClass}>Avatar URL</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </FormSection>
               {profileError && <p className="text-[11px] text-destructive">{profileError}</p>}
               {profileMsg && <p className="text-[11px] text-emerald-500/80">{profileMsg}</p>}
@@ -147,6 +143,16 @@ export default function ProfileSettingsPage() {
               </FormActions>
             </form>
           </Form>
+        </div>
+      </Surface>
+
+      <Surface padding="none">
+        <SurfaceHeader>
+          <h2 className="text-sm font-medium">Appearance</h2>
+        </SurfaceHeader>
+        <div className="p-5">
+          <p className="mb-3 text-[11px] text-muted-foreground">Choose light, dark, or match your system preference.</p>
+          <ThemeToggle variant="full" />
         </div>
       </Surface>
 

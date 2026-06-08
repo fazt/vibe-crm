@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { OpportunityStatus } from '@vibe-crm/shared';
 import type { KanbanColumn } from '@vibe-crm/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { PlanLimitsService } from '../rbac/plan-limits.service';
+import { REALTIME_EVENTS, RealtimeService } from '../realtime/realtime.service';
 import { paginate, skipTake } from '../common/pagination';
 import type {
   CreateOpportunityInput,
@@ -17,7 +19,11 @@ export interface OpportunityListQuery extends PaginationInput {
 
 @Injectable()
 export class OpportunitiesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private planLimits: PlanLimitsService,
+    private realtime: RealtimeService,
+  ) {}
 
   private include = {
     stage: true,
@@ -109,7 +115,9 @@ export class OpportunitiesService {
     }));
   }
 
-  async create(workspaceId: string, data: CreateOpportunityInput) {
+  async create(workspaceId: string, userId: string, data: CreateOpportunityInput) {
+    const count = await this.prisma.opportunity.count({ where: { workspaceId } });
+    await this.planLimits.assertCanCreate(userId, workspaceId, 'opportunities', count);
     const stage = await this.prisma.pipelineStage.findFirst({
       where: { id: data.stageId, workspaceId },
     });
@@ -129,6 +137,9 @@ export class OpportunitiesService {
         lastActivityAt: new Date(),
       },
       include: this.include,
+    }).then((opportunity) => {
+      this.realtime.emitToWorkspace(workspaceId, REALTIME_EVENTS.OPPORTUNITY_CREATED, { opportunity });
+      return opportunity;
     });
   }
 
@@ -149,6 +160,9 @@ export class OpportunitiesService {
         lastActivityAt: new Date(),
       },
       include: this.include,
+    }).then((opportunity) => {
+      this.realtime.emitToWorkspace(workspaceId, REALTIME_EVENTS.OPPORTUNITY_UPDATED, { opportunity });
+      return opportunity;
     });
   }
 
@@ -179,12 +193,20 @@ export class OpportunitiesService {
         lastActivityAt: new Date(),
       },
       include: this.include,
+    }).then((opportunity) => {
+      this.realtime.emitToWorkspace(workspaceId, REALTIME_EVENTS.OPPORTUNITY_STAGE_CHANGED, {
+        opportunity,
+        stageId: data.stageId,
+        order: data.order,
+      });
+      return opportunity;
     });
   }
 
   async remove(workspaceId: string, id: string) {
     await this.getOne(workspaceId, id);
     await this.prisma.opportunity.delete({ where: { id } });
+    this.realtime.emitToWorkspace(workspaceId, REALTIME_EVENTS.OPPORTUNITY_DELETED, { id });
     return { deleted: true };
   }
 }

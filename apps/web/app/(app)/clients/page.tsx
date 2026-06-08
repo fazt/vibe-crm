@@ -6,7 +6,9 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import type { PaginatedResponse } from '@vibe-crm/shared';
 import { ClientStatus } from '@vibe-crm/shared';
+import { PERMISSIONS } from '@vibe-crm/shared';
 import { apiClient } from '@/lib/api';
+import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/page-header';
 import { DataTable, Column } from '@/components/data-table';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +66,7 @@ const columns: Column<ClientRow>[] = [
 
 export default function ClientsPage() {
   const router = useRouter();
+  const { can } = usePermissions();
   const [data, setData] = useState<ClientRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -100,12 +103,14 @@ export default function ClientsPage() {
         title="Clients"
         description="Manage your client relationships"
         actions={
-          <Button asChild size="sm">
-            <Link href="/clients/new">
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              New client
-            </Link>
-          </Button>
+          can(PERMISSIONS.CLIENTS_CREATE) ? (
+            <Button asChild size="sm">
+              <Link href="/clients/new">
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                New client
+              </Link>
+            </Button>
+          ) : undefined
         }
       />
       <DataTable

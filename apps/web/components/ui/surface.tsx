@@ -14,16 +14,13 @@ const paddingMap = {
   lg: 'p-6',
 };
 
-export function Surface({
-  className,
-  interactive,
-  rail,
-  padding = 'md',
-  children,
-  ...props
-}: SurfaceProps) {
+export const Surface = React.forwardRef<HTMLDivElement, SurfaceProps>(function Surface(
+  { className, interactive, rail, padding = 'md', children, ...props },
+  ref,
+) {
   return (
     <div
+      ref={ref}
       className={cn(
         'studio-surface',
         rail && 'studio-rail pl-5',
@@ -36,7 +33,7 @@ export function Surface({
       {children}
     </div>
   );
-}
+});
 
 export function SurfaceHeader({
   className,

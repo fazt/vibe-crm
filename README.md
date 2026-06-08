@@ -119,12 +119,15 @@ Key routes:
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string |
+| `API_PORT` / `WEB_URL` | API port and frontend origin (CORS, OAuth redirects) |
 | `JWT_ACCESS_SECRET` | JWT signing secret (min 32 chars) |
-| `JWT_REFRESH_SECRET` | Refresh token secret |
+| `JWT_ACCESS_EXPIRES` / `JWT_REFRESH_EXPIRES` | Token lifetimes |
 | `SPACES_KEY` / `SPACES_SECRET` | DigitalOcean Spaces credentials |
-| `SPACES_BUCKET` / `SPACES_ENDPOINT` | Spaces bucket and endpoint |
-| `RESEND_API_KEY` | Resend API key for transactional email |
-| `EMAIL_FROM` | Sender address |
+| `SPACES_BUCKET` / `SPACES_ENDPOINT` / `SPACES_PUBLIC_URL` / `SPACES_REGION` | Spaces bucket config |
+| `RESEND_API_KEY` / `EMAIL_FROM` / `CONTACT_EMAIL` | Transactional email (Resend) |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` / `GITHUB_CALLBACK_URL` | GitHub OAuth |
+| `STRIPE_*` | Stripe billing keys, price IDs, webhook secret, trial days |
+| `SUPERADMIN_EMAIL` | Platform superadmin seed email |
 | `NEXT_PUBLIC_API_URL` | API URL for frontend |
 
 ## Future integrations

@@ -1,7 +1,8 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { z } from 'zod';
+import { PERMISSIONS } from '@vibe-crm/shared';
 import { SearchService } from './search.service';
-import { WorkspaceId } from '../common/decorators';
+import { RequirePermissions, WorkspaceId } from '../common/decorators';
 import { ZodValidationPipe } from '../common/zod.pipe';
 
 const searchQuerySchema = z.object({
@@ -14,6 +15,7 @@ export class SearchController {
   constructor(private searchService: SearchService) {}
 
   @Get()
+  @RequirePermissions(PERMISSIONS.SEARCH_USE)
   globalSearch(
     @WorkspaceId() workspaceId: string,
     @Query(new ZodValidationPipe(searchQuerySchema)) query: { q: string; limit: number },

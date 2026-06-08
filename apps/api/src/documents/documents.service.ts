@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { EntityType } from '@vibe-crm/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { PlanLimitsService } from '../rbac/plan-limits.service';
 import { paginate, skipTake } from '../common/pagination';
 import { confirmUploadSchema } from '@vibe-crm/validators';
 import type { PaginationInput, PresignUploadInput } from '@vibe-crm/validators';
@@ -19,6 +20,7 @@ export class DocumentsService {
   constructor(
     private prisma: PrismaService,
     private storage: StorageService,
+    private planLimits: PlanLimitsService,
   ) {}
 
   async list(workspaceId: string, query: DocumentListQuery) {
@@ -78,6 +80,9 @@ export class DocumentsService {
 
     const url = this.storage.getPublicUrl(data.key);
     const clientId = data.entityType === EntityType.CLIENT ? data.entityId : undefined;
+
+    const count = await this.prisma.document.count({ where: { workspaceId } });
+    await this.planLimits.assertCanCreate(userId, workspaceId, 'documents', count);
 
     return this.prisma.document.create({
       data: {

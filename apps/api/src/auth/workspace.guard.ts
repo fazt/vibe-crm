@@ -1,5 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { RbacService } from '../rbac/rbac.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { IS_PUBLIC_KEY, SKIP_WORKSPACE_KEY } from '../common/decorators';
 
@@ -8,6 +9,7 @@ export class WorkspaceGuard implements CanActivate {
   constructor(
     private prisma: PrismaService,
     private reflector: Reflector,
+    private rbac: RbacService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -29,11 +31,20 @@ export class WorkspaceGuard implements CanActivate {
 
     const member = await this.prisma.workspaceMember.findUnique({
       where: { workspaceId_userId: { workspaceId, userId: request.user.id } },
+      include: { role: true },
     });
     if (!member) throw new ForbiddenException('Not a workspace member');
 
+    const workspacePermissions = await this.rbac.getRolePermissions(member.roleId);
+
     request.workspaceId = workspaceId;
-    request.memberRole = member.role;
+    request.memberRoleSlug = member.role.slug;
+    request.workspacePermissions = workspacePermissions;
+    request.memberRole = {
+      id: member.role.id,
+      slug: member.role.slug,
+      name: member.role.name,
+    };
     return true;
   }
 }

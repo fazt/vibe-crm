@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { Github } from 'lucide-react';
 import { formResolver } from '@/lib/form';
 import { registerSchema, type RegisterInput } from '@vibe-crm/validators';
+import type { AuthUser, WorkspaceContext } from '@vibe-crm/shared';
 import { apiClient, API_BASE, ApiRequestError } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useWorkspaceStore } from '@/stores/workspace-store';
@@ -50,8 +51,8 @@ export default function RegisterPage() {
         workspaceName: values.workspaceName || undefined,
       };
       const res = await apiClient.post<{
-        user: { id: string; email: string; firstName: string; lastName: string };
-        workspace: { id: string; name: string; slug: string };
+        user: AuthUser;
+        workspace: WorkspaceContext;
         accessToken: string;
         refreshToken: string;
       }>('/auth/register', payload, { skipAuth: true, skipWorkspace: true });
@@ -62,9 +63,7 @@ export default function RegisterPage() {
         refreshToken: res.refreshToken,
       });
 
-      setWorkspaces([
-        { id: res.workspace.id, name: res.workspace.name, slug: res.workspace.slug, role: 'OWNER' },
-      ]);
+      setWorkspaces([res.workspace]);
       setCurrentWorkspace(res.workspace.id);
       router.push('/dashboard');
     } catch (err) {
