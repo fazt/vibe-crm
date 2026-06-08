@@ -54,4 +54,4 @@ First public release (`vibe-crm@0.1.0`): full CRM core, marketing site, and tran
 - DigitalOcean Spaces upload requires credentials; works without them only where uploads are skipped
 - GitHub OAuth requires `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` to be configured
 
-[0.1.0]: https://github.com/your-org/vibe-crm/releases/tag/v0.1.0
+[0.1.0]: https://github.com/fazt/vibe-crm/releases/tag/v0.1.0
