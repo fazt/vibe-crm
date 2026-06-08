@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "5457:5432"
+    environment:
+      POSTGRES_USER: vibe
+      POSTGRES_PASSWORD: vibe_secret
+      POSTGRES_DB: vibe_crm

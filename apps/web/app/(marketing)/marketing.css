@@ -1,0 +1,207 @@
+/* Pipeline Pulse — marketing layer (distinct from app Studio Warm) */
+
+.marketing-root {
+  --mkt-ink: #08090d;
+  --mkt-paper: #f4f0e8;
+  --mkt-signal: #ff5c38;
+  --mkt-signal-dim: #ff5c3820;
+  --mkt-mist: #8b8f9a;
+  --mkt-lane: #161820;
+  --mkt-glow: #ff5c3818;
+
+  background-color: var(--mkt-ink);
+  color: var(--mkt-paper);
+  font-family: var(--font-sora), system-ui, sans-serif;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.marketing-root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 70% -10%, var(--mkt-glow), transparent 60%),
+    radial-gradient(ellipse 40% 30% at 10% 90%, #1a1420aa, transparent 50%),
+    linear-gradient(165deg, #0c0d12 0%, #08090d 40%, #0a0b10 100%);
+}
+
+.marketing-root::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+.marketing-root > * {
+  position: relative;
+  z-index: 1;
+}
+
+.mkt-display {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-variation-settings: 'SOFT' 50, 'WONK' 0.8;
+}
+
+.mkt-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mkt-mist);
+}
+
+.mkt-signal-line {
+  background: linear-gradient(90deg, transparent, var(--mkt-signal), transparent);
+  height: 1px;
+  opacity: 0.5;
+}
+
+.mkt-card {
+  background: linear-gradient(145deg, #12141c 0%, #0e1016 100%);
+  border: 1px solid #ffffff0a;
+  border-radius: 1rem;
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+
+.mkt-card:hover {
+  border-color: #ff5c3825;
+}
+
+.mkt-card-featured {
+  border-color: #ff5c3840;
+  box-shadow: 0 0 60px #ff5c3810, inset 0 1px 0 #ffffff08;
+}
+
+.mkt-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--mkt-signal);
+  color: var(--mkt-ink);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 0 30px #ff5c3830;
+}
+
+.mkt-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 40px #ff5c3845;
+}
+
+.mkt-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid #ffffff15;
+  color: var(--mkt-paper);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.mkt-btn-ghost:hover {
+  border-color: #ffffff30;
+  background: #ffffff08;
+}
+
+.mkt-flow-grid {
+  background-image:
+    linear-gradient(#ffffff06 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff06 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black, transparent);
+}
+
+@keyframes mkt-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mkt-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes mkt-pulse-ring {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.02);
+  }
+}
+
+.mkt-animate-rise {
+  animation: mkt-rise 0.7s ease-out both;
+}
+
+.mkt-animate-rise-delay-1 {
+  animation-delay: 0.1s;
+}
+.mkt-animate-rise-delay-2 {
+  animation-delay: 0.2s;
+}
+.mkt-animate-rise-delay-3 {
+  animation-delay: 0.3s;
+}
+.mkt-animate-rise-delay-4 {
+  animation-delay: 0.4s;
+}
+
+.mkt-float {
+  animation: mkt-float 5s ease-in-out infinite;
+}
+
+.mkt-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #ffffff12;
+  background: #0c0e14;
+  color: var(--mkt-paper);
+  font-size: 0.875rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mkt-input::placeholder {
+  color: #ffffff35;
+}
+
+.mkt-input:focus {
+  outline: none;
+  border-color: #ff5c3850;
+  box-shadow: 0 0 0 3px #ff5c3815;
+}
+
+.mkt-textarea {
+  min-height: 140px;
+  resize: vertical;
+}
