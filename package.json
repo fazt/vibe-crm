@@ -1,6 +1,7 @@
 {
   "name": "vibe-crm",
   "private": true,
+  "version": "0.1.0",
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",

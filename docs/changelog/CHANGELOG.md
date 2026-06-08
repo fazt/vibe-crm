@@ -1,0 +1,57 @@
+# Changelog
+
+All notable changes to Vibe CRM are documented here.  
+Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).  
+Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] — 2026-06-08
+
+First public release (`vibe-crm@0.1.0`): full CRM core, marketing site, and transactional email for contact.
+
+### Added
+
+#### Platform
+- Turborepo monorepo with `apps/web`, `apps/api`, and shared packages (`database`, `validators`, `shared`, `emails`, `config`)
+- PostgreSQL + Prisma schema, migrations, and demo seed (`demo@vibecrm.com` / `password123`)
+- Docker Compose for local Postgres (port 5457)
+- Environment template (`.env.example`) with JWT, Spaces, and Resend variables
+
+#### Backend (NestJS)
+- JWT auth: register, login, refresh, forgot/reset password, GitHub OAuth routes
+- Multi-tenant workspaces with role-based access (Owner, Admin, Member)
+- CRM modules: clients, companies, contacts, opportunities (list + Kanban stage moves), pipeline stages, tasks, notes, activities, reminders, tags, documents (presigned uploads)
+- Global search, in-app notifications, dashboard metrics
+- Scheduled jobs: due reminders, overdue task digests, stale opportunity alerts (email via Resend)
+- Public contact endpoint `POST /api/contact` with Zod validation and Resend delivery
+- Webhook stub `POST /api/webhooks/inbound` (disabled)
+
+#### Frontend — App (Next.js 15)
+- Authenticated app shell: sidebar, topbar, workspace switcher, command palette (`Cmd+K`)
+- **Studio Warm** design system: copper rail surfaces, shared primitives (`Surface`, `StatTile`, `AuthShell`, `DetailHeader`, `FormSection`)
+- Pages: dashboard (KPIs, pipeline strip, win rate), clients, companies, contacts, opportunities (Kanban + list), tasks, activities, settings (profile, workspace)
+- Auth flows: login, register, forgot/reset password, GitHub callback
+
+#### Frontend — Marketing
+- Landing page (`/`) with **Pipeline Pulse** editorial aesthetic (Fraunces + Sora)
+- Pricing page (`/pricing`) with Solo, Studio, and Agency tiers + FAQ
+- Contact page (`/contact`) wired to backend `POST /api/contact`
+- Shared marketing nav and footer
+
+#### Email (Resend)
+- Templates: welcome, password reset, reminders, overdue tasks, stale opportunities, contact form, contact confirmation
+- Config: `RESEND_API_KEY`, `EMAIL_FROM`, `CONTACT_EMAIL`
+
+### Changed
+- Root route `/` serves marketing landing for guests; authenticated users redirect to `/dashboard`
+- Contact form logic lives in the API (not Next.js route handlers); web calls `NEXT_PUBLIC_API_URL/contact`
+
+### Security
+- Workspace-scoped routes require `Authorization` + `X-Workspace-Id`
+- `.env` and `.env.local` excluded from version control
+
+### Known limitations
+- Inbound webhooks and several integration stubs return 503
+- DigitalOcean Spaces upload requires credentials; works without them only where uploads are skipped
+- GitHub OAuth requires `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` to be configured
+
+[0.1.0]: https://github.com/your-org/vibe-crm/releases/tag/v0.1.0
