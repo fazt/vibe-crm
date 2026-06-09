@@ -4,6 +4,16 @@ All notable changes to Vibe CRM are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).  
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-06-09
+
+Fix workspace header race causing "Workspace header required" on app load.
+
+### Fixed
+
+- App layout waits for workspace fetch and `currentWorkspaceId` before rendering
+- `X-Workspace-Id` header reads from Zustand store via `workspace-id` helper (not stale localStorage)
+- Topbar notifications and `useWorkspaceMembers` skip API calls until workspace is ready
+
 ## [0.3.0] — 2026-06-09
 
 Full CRM CRUD UI for opportunities, tasks, activities, and core entities.

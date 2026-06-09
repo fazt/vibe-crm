@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchCurrentUser, useAuthStore } from '@/stores/auth-store';
 import { useWorkspaceStore } from '@/stores/workspace-store';
@@ -16,6 +16,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const fetchWorkspaces = useWorkspaceStore((s) => s.fetchWorkspaces);
   const currentWorkspaceId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const workspaceHydrated = useWorkspaceStore((s) => s.isHydrated);
+  const [workspacesReady, setWorkspacesReady] = useState(false);
 
   useEffect(() => {
     if (isHydrated && !accessToken) {
@@ -24,18 +25,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [isHydrated, accessToken, router]);
 
   useEffect(() => {
-    if (!isHydrated || !accessToken) return;
+    if (!isHydrated || !accessToken || !workspaceHydrated) return;
+
+    setWorkspacesReady(false);
     fetchWorkspaces()
       .then(() => fetchCurrentUser())
-      .catch(() => undefined);
-  }, [isHydrated, accessToken, fetchWorkspaces]);
+      .catch(() => undefined)
+      .finally(() => setWorkspacesReady(true));
+  }, [isHydrated, accessToken, workspaceHydrated, fetchWorkspaces]);
 
   useEffect(() => {
     if (!isHydrated || !accessToken || !workspaceHydrated || !currentWorkspaceId) return;
     fetchCurrentUser().catch(() => undefined);
   }, [currentWorkspaceId, workspaceHydrated, isHydrated, accessToken]);
 
-  if (!isHydrated || !workspaceHydrated) {
+  const isAppReady =
+    isHydrated && workspaceHydrated && workspacesReady && !!currentWorkspaceId;
+
+  if (!isAppReady) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Surface className="flex h-16 w-16 items-center justify-center">

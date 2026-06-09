@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { WorkspaceContext } from '@vibe-crm/shared';
 import { apiClient } from '@/lib/api';
+import { registerWorkspaceIdGetter } from '@/lib/workspace-id';
 
 interface WorkspaceState {
   workspaces: WorkspaceContext[];
@@ -49,6 +50,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
     },
   ),
 );
+
+registerWorkspaceIdGetter(() => useWorkspaceStore.getState().currentWorkspaceId);
 
 export function useCurrentWorkspace() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);

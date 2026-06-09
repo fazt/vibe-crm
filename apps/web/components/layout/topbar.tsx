@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, LogOut, Search, Settings, User } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useWorkspaceStore } from '@/stores/workspace-store';
 import { useUiStore } from '@/stores/ui-store';
 import { apiClient } from '@/lib/api';
 import type { PaginatedResponse } from '@vibe-crm/shared';
@@ -34,14 +35,16 @@ export function Topbar() {
   const logout = useAuthStore((s) => s.logout);
   const setCommandOpen = useUiStore((s) => s.setCommandOpen);
   const router = useRouter();
+  const currentWorkspaceId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    if (!currentWorkspaceId) return;
     apiClient
       .get<PaginatedResponse<Notification>>('/notifications', { read: 'false', limit: 1 })
       .then((res) => setUnreadCount(res.meta.total))
       .catch(() => setUnreadCount(0));
-  }, []);
+  }, [currentWorkspaceId]);
 
   const handleLogout = () => {
     logout();

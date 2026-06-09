@@ -3,20 +3,9 @@
 import { useEffect, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { getAuthTokens } from '@/lib/auth-tokens';
+import { getWorkspaceId } from '@/lib/workspace-id';
 
 const WS_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api').replace(/\/api$/, '');
-
-function getWorkspaceId() {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem('vibe-workspace');
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed.state?.currentWorkspaceId as string | null;
-  } catch {
-    return null;
-  }
-}
 
 export function useWorkspaceSocket(
   events: Record<string, (payload: unknown) => void>,

@@ -1,5 +1,6 @@
 import type { ApiError } from '@vibe-crm/shared';
 import { clearAuthTokens, getAuthTokens, setAuthTokens } from '@/lib/auth-tokens';
+import { getWorkspaceId } from '@/lib/workspace-id';
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
@@ -23,18 +24,6 @@ type RequestOptions = RequestInit & {
 };
 
 let refreshPromise: Promise<boolean> | null = null;
-
-function getWorkspaceId() {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem('vibe-workspace');
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed.state?.currentWorkspaceId as string | null;
-  } catch {
-    return null;
-  }
-}
 
 function setAuthCookie(token: string | null) {
   if (typeof document === 'undefined') return;
