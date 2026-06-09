@@ -66,7 +66,7 @@ export function Topbar() {
       <div className="flex items-center gap-1">
         <ThemeToggle className="h-8 w-8" />
         <Button variant="ghost" size="icon" className="relative h-8 w-8" asChild>
-          <Link href="/settings/profile">
+          <Link href="/settings/notifications">
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 font-mono text-[10px] font-semibold tabular-nums text-primary-foreground">

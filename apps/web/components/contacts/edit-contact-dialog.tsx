@@ -1,16 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { formResolver } from '@/lib/form';
-import { createContactSchema, type CreateContactInput } from '@vibe-crm/validators';
+import { updateContactSchema, type CreateContactInput } from '@vibe-crm/validators';
 import type { PaginatedResponse } from '@vibe-crm/shared';
+import { PERMISSIONS } from '@vibe-crm/shared';
+import { z } from 'zod';
 import { apiClient, ApiRequestError } from '@/lib/api';
-import { DetailHeader } from '@/components/detail/detail-header';
-import { FormSection, FormActions } from '@/components/forms/form-section';
-import { Surface } from '@/components/ui/surface';
+import { usePermissions } from '@/hooks/use-permissions';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,70 +34,120 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+type UpdateContactInput = z.infer<typeof updateContactSchema>;
+
+interface EditContactDialogProps {
+  contactId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved?: () => void;
+  onDeleted?: () => void;
+}
+
 const labelClass = 'studio-label';
 const selectTriggerClass = 'studio-inset rounded-lg';
 
-export default function NewContactPage() {
-  const router = useRouter();
+export function EditContactDialog({
+  contactId,
+  open,
+  onOpenChange,
+  onSaved,
+  onDeleted,
+}: EditContactDialogProps) {
+  const { can } = usePermissions();
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
 
-  const form = useForm<CreateContactInput>({
-    resolver: formResolver<CreateContactInput>(createContactSchema),
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      jobTitle: '',
-      isPrimary: false,
-    },
+  const canUpdate = can(PERMISSIONS.CONTACTS_UPDATE);
+  const canDelete = can(PERMISSIONS.CONTACTS_DELETE);
+
+  const form = useForm<UpdateContactInput>({
+    resolver: formResolver<UpdateContactInput>(updateContactSchema),
   });
 
   useEffect(() => {
+    if (!open || !contactId) return;
+    setLoading(true);
     Promise.all([
+      apiClient.get<CreateContactInput & { id: string }>(`/contacts/${contactId}`),
       apiClient.get<PaginatedResponse<{ id: string; name: string }>>('/clients', { limit: 100 }),
       apiClient.get<PaginatedResponse<{ id: string; name: string }>>('/companies', { limit: 100 }),
-    ]).then(([cl, co]) => {
-      setClients(cl.data);
-      setCompanies(co.data);
-    });
-  }, []);
+    ])
+      .then(([contact, cl, co]) => {
+        setClients(cl.data);
+        setCompanies(co.data);
+        form.reset({
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          email: contact.email ?? '',
+          phone: contact.phone ?? '',
+          jobTitle: contact.jobTitle ?? '',
+          clientId: contact.clientId,
+          companyId: contact.companyId,
+          isPrimary: contact.isPrimary,
+        });
+      })
+      .catch(() => setError('Failed to load contact'))
+      .finally(() => setLoading(false));
+  }, [open, contactId, form]);
 
-  const onSubmit = async (values: CreateContactInput) => {
+  const onSubmit = async (values: UpdateContactInput) => {
+    if (!canUpdate) return;
     setError('');
     try {
-      const payload = {
+      await apiClient.patch(`/contacts/${contactId}`, {
         ...values,
         email: values.email || undefined,
         clientId: values.clientId || undefined,
         companyId: values.companyId || undefined,
-      };
-      const contact = await apiClient.post<{ id: string }>('/contacts', payload);
-      router.push(`/contacts/${contact.id}`);
+      });
+      onSaved?.();
+      onOpenChange(false);
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Failed to create contact');
+      setError(err instanceof ApiRequestError ? err.message : 'Save failed');
     }
   };
 
-  return (
-    <div className="max-w-lg">
-      <DetailHeader backHref="/contacts" backLabel="Contacts" title="New contact" />
+  const handleDelete = async () => {
+    if (!canDelete) return;
+    if (!confirm('Delete this contact?')) return;
+    setDeleting(true);
+    try {
+      await apiClient.delete(`/contacts/${contactId}`);
+      onDeleted?.();
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : 'Delete failed');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-      <Surface>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormSection title="Personal info">
+  if (!canUpdate && !canDelete) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit contact</DialogTitle>
+        </DialogHeader>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="firstName"
                   render={({ field }) => (
-                    <FormItem className="space-y-2">
+                    <FormItem>
                       <FormLabel className={labelClass}>First name</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} disabled={!canUpdate} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -103,10 +157,10 @@ export default function NewContactPage() {
                   control={form.control}
                   name="lastName"
                   render={({ field }) => (
-                    <FormItem className="space-y-2">
+                    <FormItem>
                       <FormLabel className={labelClass}>Last name</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} disabled={!canUpdate} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -117,10 +171,10 @@ export default function NewContactPage() {
                 control={form.control}
                 name="email"
                 render={({ field }) => (
-                  <FormItem className="space-y-2">
+                  <FormItem>
                     <FormLabel className={labelClass}>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" {...field} />
+                      <Input type="email" {...field} disabled={!canUpdate} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -130,25 +184,26 @@ export default function NewContactPage() {
                 control={form.control}
                 name="jobTitle"
                 render={({ field }) => (
-                  <FormItem className="space-y-2">
+                  <FormItem>
                     <FormLabel className={labelClass}>Job title</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} disabled={!canUpdate} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </FormSection>
-
-            <FormSection title="Associations">
               <FormField
                 control={form.control}
                 name="clientId"
                 render={({ field }) => (
-                  <FormItem className="space-y-2">
+                  <FormItem>
                     <FormLabel className={labelClass}>Client</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                    <Select
+                      onValueChange={(v) => field.onChange(v || undefined)}
+                      value={field.value ?? ''}
+                      disabled={!canUpdate}
+                    >
                       <FormControl>
                         <SelectTrigger className={selectTriggerClass}>
                           <SelectValue placeholder="Optional" />
@@ -170,9 +225,13 @@ export default function NewContactPage() {
                 control={form.control}
                 name="companyId"
                 render={({ field }) => (
-                  <FormItem className="space-y-2">
+                  <FormItem>
                     <FormLabel className={labelClass}>Company</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                    <Select
+                      onValueChange={(v) => field.onChange(v || undefined)}
+                      value={field.value ?? ''}
+                      disabled={!canUpdate}
+                    >
                       <FormControl>
                         <SelectTrigger className={selectTriggerClass}>
                           <SelectValue placeholder="Optional" />
@@ -196,7 +255,11 @@ export default function NewContactPage() {
                 render={({ field }) => (
                   <FormItem className="flex items-center gap-2 space-y-0">
                     <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={!canUpdate}
+                      />
                     </FormControl>
                     <FormLabel className="text-[11px] font-normal text-muted-foreground">
                       Primary contact
@@ -204,21 +267,36 @@ export default function NewContactPage() {
                   </FormItem>
                 )}
               />
-            </FormSection>
-
-            {error && <p className="text-[11px] text-destructive">{error}</p>}
-
-            <FormActions>
-              <Button type="button" variant="ghost" size="sm" asChild>
-                <Link href="/contacts">Cancel</Link>
-              </Button>
-              <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Creating...' : 'Create contact'}
-              </Button>
-            </FormActions>
-          </form>
-        </Form>
-      </Surface>
-    </div>
+              {error && <p className="text-xs text-destructive">{error}</p>}
+              <div className="flex justify-between gap-2">
+                {canDelete ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => void handleDelete()}
+                    disabled={deleting}
+                  >
+                    Delete
+                  </Button>
+                ) : (
+                  <div />
+                )}
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                    Cancel
+                  </Button>
+                  {canUpdate && (
+                    <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
+                      Save
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </form>
+          </Form>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

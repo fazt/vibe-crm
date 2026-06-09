@@ -1,8 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { Pencil } from 'lucide-react';
+import { PERMISSIONS } from '@vibe-crm/shared';
+import { usePermissions } from '@/hooks/use-permissions';
+import { EditCompanyDialog } from '@/components/companies/edit-company-dialog';
 import type { PaginatedResponse } from '@vibe-crm/shared';
 import { apiClient } from '@/lib/api';
 import { DetailHeader } from '@/components/detail/detail-header';
@@ -35,12 +39,15 @@ function MetaField({ label, value, className }: { label: string; value: string |
 
 export default function CompanyDetailPage() {
   const params = useParams();
+  const router = useRouter();
+  const { can } = usePermissions();
   const id = params.id as string;
   const [company, setCompany] = useState<CompanyDetail | null>(null);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     Promise.all([
       apiClient.get<CompanyDetail>(`/companies/${id}`),
       apiClient.get<PaginatedResponse<{ id: string; name: string }>>('/clients', { companyId: id, limit: 20 }),
@@ -52,6 +59,10 @@ export default function CompanyDetailPage() {
       .catch(() => setCompany(null))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (loading) {
     return (
@@ -80,6 +91,22 @@ export default function CompanyDetailPage() {
         backLabel="Companies"
         title={company.name}
         description={company.domain ?? undefined}
+        actions={
+          (can(PERMISSIONS.COMPANIES_UPDATE) || can(PERMISSIONS.COMPANIES_DELETE)) ? (
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil className="mr-1.5 h-3.5 w-3.5" />
+              Edit
+            </Button>
+          ) : undefined
+        }
+      />
+
+      <EditCompanyDialog
+        companyId={id}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSaved={load}
+        onDeleted={() => router.push('/companies')}
       />
 
       <div className="grid gap-4 lg:grid-cols-2">

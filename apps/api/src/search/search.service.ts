@@ -14,7 +14,7 @@ export class SearchService {
     const perType = Math.max(2, Math.ceil(limit / 4));
     const contains = { contains: q, mode: 'insensitive' as const };
 
-    const [clients, contacts, opportunities, tasks] = await Promise.all([
+    const [clients, contacts, companies, opportunities, tasks, activities] = await Promise.all([
       this.prisma.client.findMany({
         where: {
           workspaceId,
@@ -35,6 +35,14 @@ export class SearchService {
         take: perType,
         select: { id: true, firstName: true, lastName: true, email: true },
       }),
+      this.prisma.company.findMany({
+        where: {
+          workspaceId,
+          OR: [{ name: contains }, { domain: contains }],
+        },
+        take: perType,
+        select: { id: true, name: true, domain: true },
+      }),
       this.prisma.opportunity.findMany({
         where: {
           workspaceId,
@@ -53,6 +61,14 @@ export class SearchService {
         take: perType,
         select: { id: true, title: true, status: true },
       }),
+      this.prisma.activity.findMany({
+        where: {
+          workspaceId,
+          OR: [{ title: contains }, { description: contains }],
+        },
+        take: perType,
+        select: { id: true, title: true, type: true },
+      }),
     ]);
 
     const results: SearchResult[] = [
@@ -70,6 +86,13 @@ export class SearchService {
         subtitle: c.email ?? undefined,
         url: `/contacts/${c.id}`,
       })),
+      ...companies.map((c) => ({
+        type: 'company',
+        id: c.id,
+        title: c.name,
+        subtitle: c.domain ?? undefined,
+        url: `/companies/${c.id}`,
+      })),
       ...opportunities.map((o) => ({
         type: 'opportunity',
         id: o.id,
@@ -82,7 +105,14 @@ export class SearchService {
         id: t.id,
         title: t.title,
         subtitle: t.status,
-        url: `/tasks/${t.id}`,
+        url: `/tasks?id=${t.id}`,
+      })),
+      ...activities.map((a) => ({
+        type: 'activity',
+        id: a.id,
+        title: a.title,
+        subtitle: a.type,
+        url: `/activities?id=${a.id}`,
       })),
     ];
 

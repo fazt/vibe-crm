@@ -2,14 +2,18 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List, Plus } from 'lucide-react';
 import type { KanbanColumn, PaginatedResponse } from '@vibe-crm/shared';
+import { PERMISSIONS } from '@vibe-crm/shared';
 import { apiClient } from '@/lib/api';
+import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/page-header';
 import { DataTable, Column } from '@/components/data-table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { KanbanBoard } from '@/components/opportunities/kanban-board';
 import { OpportunityDetailDialog } from '@/components/opportunities/opportunity-detail-dialog';
+import { CreateOpportunityDialog } from '@/components/opportunities/create-opportunity-dialog';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 
 interface OpportunityRow {
@@ -85,7 +89,9 @@ function ViewToggle({
 
 export default function OpportunitiesPage() {
   const searchParams = useSearchParams();
+  const { can } = usePermissions();
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
+  const [createOpen, setCreateOpen] = useState(false);
   const [columns, setColumns] = useState<KanbanColumn[]>([]);
   const [listData, setListData] = useState<OpportunityRow[]>([]);
   const [listTotal, setListTotal] = useState(0);
@@ -152,7 +158,17 @@ export default function OpportunitiesPage() {
         title="Opportunities"
         description="Track deals through your pipeline"
         label="Pipeline"
-        actions={<ViewToggle view={view} onChange={setView} />}
+        actions={
+          <div className="flex items-center gap-2">
+            <ViewToggle view={view} onChange={setView} />
+            {can(PERMISSIONS.OPPORTUNITIES_CREATE) && (
+              <Button size="sm" onClick={() => setCreateOpen(true)}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                New opportunity
+              </Button>
+            )}
+          </div>
+        }
       />
 
       {view === 'list' ? (
@@ -185,6 +201,14 @@ export default function OpportunitiesPage() {
         open={dialogOpen}
         onOpenChange={handleDialogChange}
         onUpdated={() => {
+          if (view === 'kanban') fetchKanban();
+          else fetchList();
+        }}
+      />
+      <CreateOpportunityDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={() => {
           if (view === 'kanban') fetchKanban();
           else fetchList();
         }}

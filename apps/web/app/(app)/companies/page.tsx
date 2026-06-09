@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import type { PaginatedResponse } from '@vibe-crm/shared';
+import { PERMISSIONS } from '@vibe-crm/shared';
 import { apiClient } from '@/lib/api';
+import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/page-header';
 import { DataTable, Column } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
@@ -37,6 +39,7 @@ const columns: Column<CompanyRow>[] = [
 
 export default function CompaniesPage() {
   const router = useRouter();
+  const { can } = usePermissions();
   const [data, setData] = useState<CompanyRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -71,12 +74,14 @@ export default function CompaniesPage() {
         title="Companies"
         description="Organizations in your workspace"
         actions={
-          <Button asChild size="sm">
-            <Link href="/companies/new">
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              New company
-            </Link>
-          </Button>
+          can(PERMISSIONS.COMPANIES_CREATE) ? (
+            <Button asChild size="sm">
+              <Link href="/companies/new">
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                New company
+              </Link>
+            </Button>
+          ) : undefined
         }
       />
       <DataTable

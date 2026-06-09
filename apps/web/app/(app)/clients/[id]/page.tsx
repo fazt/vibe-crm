@@ -1,12 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { Pencil, Plus } from 'lucide-react';
 import type { PaginatedResponse } from '@vibe-crm/shared';
-import { ClientStatus, EntityType, TaskStatus } from '@vibe-crm/shared';
+import { ClientStatus, EntityType, PERMISSIONS, TaskStatus } from '@vibe-crm/shared';
 import { apiClient } from '@/lib/api';
+import { usePermissions } from '@/hooks/use-permissions';
 import { DetailHeader } from '@/components/detail/detail-header';
+import { EditClientDialog } from '@/components/clients/edit-client-dialog';
+import { TaskDialog } from '@/components/tasks/task-dialog';
+import { ActivityDialog } from '@/components/activities/activity-dialog';
+import { NoteDialog } from '@/components/notes/note-dialog';
+import { CreateOpportunityDialog } from '@/components/opportunities/create-opportunity-dialog';
 import { Badge } from '@/components/ui/badge';
 import { CopyEmail } from '@/components/copy-email';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -55,17 +62,24 @@ interface ClientDetail {
 
 export default function ClientDetailPage() {
   const params = useParams();
+  const router = useRouter();
+  const { can } = usePermissions();
   const id = params.id as string;
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
 
-  useEffect(() => {
+  const loadClient = useCallback(() => {
     apiClient
       .get<ClientDetail>(`/clients/${id}`)
       .then(setClient)
       .catch(() => setClient(null))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    loadClient();
+  }, [loadClient]);
 
   if (loading) {
     return (
@@ -95,10 +109,26 @@ export default function ClientDetailPage() {
         title={client.name}
         description={client.company?.name ?? undefined}
         actions={
-          <Badge variant={statusVariant[client.status]} className="capitalize">
-            {client.status.toLowerCase()}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={statusVariant[client.status]} className="capitalize">
+              {client.status.toLowerCase()}
+            </Badge>
+            {(can(PERMISSIONS.CLIENTS_UPDATE) || can(PERMISSIONS.CLIENTS_DELETE)) && (
+              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Edit
+              </Button>
+            )}
+          </div>
         }
+      />
+
+      <EditClientDialog
+        clientId={id}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSaved={loadClient}
+        onDeleted={() => router.push('/clients')}
       />
 
       <Tabs defaultValue="overview" className="space-y-4">
@@ -196,9 +226,9 @@ function ContactsTab({ clientId }: { clientId: string }) {
     <CompactList>
       {items.map((c) => (
         <CompactRow key={c.id}>
-          <span className="text-sm font-medium">
+          <Link href={`/contacts/${c.id}`} className="text-sm font-medium hover:underline">
             {c.firstName} {c.lastName}
-          </span>
+          </Link>
           {c.email && <CopyEmail email={c.email} />}
         </CompactRow>
       ))}
@@ -207,9 +237,13 @@ function ContactsTab({ clientId }: { clientId: string }) {
 }
 
 function TasksTab({ clientId }: { clientId: string }) {
+  const { can } = usePermissions();
   const [items, setItems] = useState<{ id: string; title: string; status: TaskStatus; dueDate: string | null }[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     apiClient
       .get<PaginatedResponse<{ id: string; title: string; status: TaskStatus; dueDate: string | null }>>(
         '/tasks',
@@ -219,31 +253,57 @@ function TasksTab({ clientId }: { clientId: string }) {
       .catch(() => setItems([]));
   }, [clientId]);
 
-  if (items.length === 0) {
-    return <p className="py-8 text-center text-xs text-muted-foreground">No tasks yet.</p>;
-  }
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
-    <CompactList>
-      {items.map((t) => (
-        <CompactRow key={t.id}>
-          <span className="text-sm">{t.title}</span>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <Badge variant="outline">{t.status.replace('_', ' ')}</Badge>
-            {t.dueDate && (
-              <span className="font-mono tabular-nums">{formatDate(t.dueDate)}</span>
-            )}
-          </div>
-        </CompactRow>
-      ))}
-    </CompactList>
+    <div className="space-y-3">
+      {can(PERMISSIONS.TASKS_CREATE) && (
+        <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          New task
+        </Button>
+      )}
+      {items.length === 0 ? (
+        <p className="py-8 text-center text-xs text-muted-foreground">No tasks yet.</p>
+      ) : (
+        <CompactList>
+          {items.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/40"
+              onClick={() => {
+                setSelectedId(t.id);
+                setDialogOpen(true);
+              }}
+            >
+              <span className="text-sm">{t.title}</span>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <Badge variant="outline">{t.status.replace('_', ' ')}</Badge>
+                {t.dueDate && (
+                  <span className="font-mono tabular-nums">{formatDate(t.dueDate)}</span>
+                )}
+              </div>
+            </button>
+          ))}
+        </CompactList>
+      )}
+      <TaskDialog taskId={selectedId} open={dialogOpen} onOpenChange={setDialogOpen} onSaved={load} />
+      <TaskDialog taskId={null} open={createOpen} onOpenChange={setCreateOpen} defaultClientId={clientId} onSaved={load} />
+    </div>
   );
 }
 
 function NotesTab({ clientId }: { clientId: string }) {
+  const { can } = usePermissions();
   const [items, setItems] = useState<{ id: string; title: string | null; content: string; createdAt: string }[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     apiClient
       .get<PaginatedResponse<{ id: string; title: string | null; content: string; createdAt: string }>>(
         '/notes',
@@ -253,29 +313,55 @@ function NotesTab({ clientId }: { clientId: string }) {
       .catch(() => setItems([]));
   }, [clientId]);
 
-  if (items.length === 0) {
-    return <p className="py-8 text-center text-xs text-muted-foreground">No notes yet.</p>;
-  }
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
-    <CompactList>
-      {items.map((n) => (
-        <div key={n.id} className="px-4 py-3">
-          {n.title && <p className="text-sm font-medium">{n.title}</p>}
-          <p className="mt-1 text-sm text-muted-foreground line-clamp-3">{n.content}</p>
-          <p className="mt-2 font-mono text-[10px] tabular-nums text-muted-foreground">
-            {formatRelativeDate(n.createdAt)}
-          </p>
-        </div>
-      ))}
-    </CompactList>
+    <div className="space-y-3">
+      {can(PERMISSIONS.NOTES_CREATE) && (
+        <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          New note
+        </Button>
+      )}
+      {items.length === 0 ? (
+        <p className="py-8 text-center text-xs text-muted-foreground">No notes yet.</p>
+      ) : (
+        <CompactList>
+          {items.map((n) => (
+            <button
+              key={n.id}
+              type="button"
+              className="w-full px-4 py-3 text-left hover:bg-muted/40"
+              onClick={() => {
+                setSelectedId(n.id);
+                setDialogOpen(true);
+              }}
+            >
+              {n.title && <p className="text-sm font-medium">{n.title}</p>}
+              <p className="mt-1 text-sm text-muted-foreground line-clamp-3">{n.content}</p>
+              <p className="mt-2 font-mono text-[10px] tabular-nums text-muted-foreground">
+                {formatRelativeDate(n.createdAt)}
+              </p>
+            </button>
+          ))}
+        </CompactList>
+      )}
+      <NoteDialog noteId={selectedId} open={dialogOpen} onOpenChange={setDialogOpen} onSaved={load} />
+      <NoteDialog noteId={null} open={createOpen} onOpenChange={setCreateOpen} defaultClientId={clientId} onSaved={load} />
+    </div>
   );
 }
 
 function ActivitiesTab({ clientId }: { clientId: string }) {
+  const { can } = usePermissions();
   const [items, setItems] = useState<{ id: string; title: string; type: string; occurredAt: string }[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     apiClient
       .get<PaginatedResponse<{ id: string; title: string; type: string; occurredAt: string }>>(
         '/activities',
@@ -285,24 +371,46 @@ function ActivitiesTab({ clientId }: { clientId: string }) {
       .catch(() => setItems([]));
   }, [clientId]);
 
-  if (items.length === 0) {
-    return <p className="py-8 text-center text-xs text-muted-foreground">No activities logged.</p>;
-  }
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
-    <CompactList>
-      {items.map((a) => (
-        <CompactRow key={a.id}>
-          <div>
-            <p className="text-sm">{a.title}</p>
-            <p className="text-[11px] capitalize text-muted-foreground">{a.type.toLowerCase()}</p>
-          </div>
-          <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-            {formatRelativeDate(a.occurredAt)}
-          </span>
-        </CompactRow>
-      ))}
-    </CompactList>
+    <div className="space-y-3">
+      {can(PERMISSIONS.ACTIVITIES_CREATE) && (
+        <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          Log activity
+        </Button>
+      )}
+      {items.length === 0 ? (
+        <p className="py-8 text-center text-xs text-muted-foreground">No activities logged.</p>
+      ) : (
+        <CompactList>
+          {items.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/40"
+              onClick={() => {
+                setSelectedId(a.id);
+                setDialogOpen(true);
+              }}
+            >
+              <div>
+                <p className="text-sm">{a.title}</p>
+                <p className="text-[11px] capitalize text-muted-foreground">{a.type.toLowerCase()}</p>
+              </div>
+              <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                {formatRelativeDate(a.occurredAt)}
+              </span>
+            </button>
+          ))}
+        </CompactList>
+      )}
+      <ActivityDialog activityId={selectedId} open={dialogOpen} onOpenChange={setDialogOpen} onSaved={load} />
+      <ActivityDialog activityId={null} open={createOpen} onOpenChange={setCreateOpen} defaultClientId={clientId} onSaved={load} />
+    </div>
   );
 }
 
@@ -347,9 +455,11 @@ function DocumentsTab({ clientId }: { clientId: string }) {
 }
 
 function OpportunitiesTab({ clientId }: { clientId: string }) {
+  const { can } = usePermissions();
   const [items, setItems] = useState<{ id: string; title: string; value: number; status: string }[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     apiClient
       .get<PaginatedResponse<{ id: string; title: string; value: number; status: string }>>(
         '/opportunities',
@@ -359,23 +469,36 @@ function OpportunitiesTab({ clientId }: { clientId: string }) {
       .catch(() => setItems([]));
   }, [clientId]);
 
-  if (items.length === 0) {
-    return <p className="py-8 text-center text-xs text-muted-foreground">No opportunities linked.</p>;
-  }
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
-    <CompactList>
-      {items.map((o) => (
-        <CompactRow key={o.id}>
-          <Link href="/opportunities" className="text-sm hover:underline">
-            {o.title}
-          </Link>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-sm tabular-nums">{formatCurrency(o.value)}</span>
-            <Badge variant="outline">{o.status}</Badge>
-          </div>
-        </CompactRow>
-      ))}
-    </CompactList>
+    <div className="space-y-3">
+      {can(PERMISSIONS.OPPORTUNITIES_CREATE) && (
+        <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          New opportunity
+        </Button>
+      )}
+      {items.length === 0 ? (
+        <p className="py-8 text-center text-xs text-muted-foreground">No opportunities linked.</p>
+      ) : (
+        <CompactList>
+          {items.map((o) => (
+            <CompactRow key={o.id}>
+              <Link href={`/opportunities?id=${o.id}`} className="text-sm hover:underline">
+                {o.title}
+              </Link>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-sm tabular-nums">{formatCurrency(o.value)}</span>
+                <Badge variant="outline">{o.status}</Badge>
+              </div>
+            </CompactRow>
+          ))}
+        </CompactList>
+      )}
+      <CreateOpportunityDialog open={createOpen} onOpenChange={setCreateOpen} defaultClientId={clientId} onCreated={load} />
+    </div>
   );
 }

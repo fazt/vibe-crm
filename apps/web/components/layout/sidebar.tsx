@@ -4,17 +4,21 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Activity,
+  Bell,
   Building2,
   CheckSquare,
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  GitBranch,
   LayoutDashboard,
   Settings,
   Shield,
+  Tag,
   Target,
   UserCircle,
   Users,
+  AlarmClock,
 } from 'lucide-react';
 import { PERMISSIONS } from '@vibe-crm/shared';
 import { cn } from '@/lib/utils';
@@ -32,11 +36,15 @@ const navItems = [
   { href: '/opportunities', label: 'Opportunities', icon: Target, permission: PERMISSIONS.OPPORTUNITIES_READ },
   { href: '/tasks', label: 'Tasks', icon: CheckSquare, permission: PERMISSIONS.TASKS_READ },
   { href: '/activities', label: 'Activities', icon: Activity, permission: PERMISSIONS.ACTIVITIES_READ },
+  { href: '/reminders', label: 'Reminders', icon: AlarmClock, permission: PERMISSIONS.REMINDERS_READ },
 ];
 
 const settingsItems = [
   { href: '/settings/profile', label: 'Profile', icon: Settings },
   { href: '/settings/workspace', label: 'Workspace', icon: Building2 },
+  { href: '/settings/notifications', label: 'Notifications', icon: Bell, permission: PERMISSIONS.NOTIFICATIONS_READ },
+  { href: '/settings/tags', label: 'Tags', icon: Tag, permission: PERMISSIONS.TAGS_READ },
+  { href: '/settings/pipeline', label: 'Pipeline', icon: GitBranch, permission: PERMISSIONS.PIPELINE_READ },
   { href: '/settings/billing', label: 'Billing', icon: CreditCard, permission: PERMISSIONS.BILLING_MANAGE },
 ];
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import type { PaginatedResponse } from '@vibe-crm/shared';
 import { PERMISSIONS } from '@vibe-crm/shared';
@@ -39,6 +40,7 @@ const columns: Column<ContactRow>[] = [
 ];
 
 export default function ContactsPage() {
+  const router = useRouter();
   const { can, usage, planLimits } = usePermissions();
   const [data, setData] = useState<ContactRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -102,6 +104,7 @@ export default function ContactsPage() {
           setPage(1);
         }}
         loading={loading}
+        onRowClick={(row) => router.push(`/contacts/${row.id}`)}
       />
     </div>
   );

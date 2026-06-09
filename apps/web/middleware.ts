@@ -30,6 +30,7 @@ const protectedPrefixes = [
   '/opportunities',
   '/tasks',
   '/activities',
+  '/reminders',
   '/settings',
 ];
 

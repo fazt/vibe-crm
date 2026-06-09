@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  Activity,
   Building2,
   CheckSquare,
   Target,
@@ -27,6 +28,7 @@ const typeIcons: Record<string, React.ElementType> = {
   opportunity: Target,
   task: CheckSquare,
   company: Building2,
+  activity: Activity,
 };
 
 export function CommandPalette() {

@@ -4,6 +4,28 @@ All notable changes to Vibe CRM are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).  
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-06-09
+
+Full CRM CRUD UI for opportunities, tasks, activities, and core entities.
+
+### Added
+
+- Task, activity, and note dialogs with create/edit/delete and permission gates
+- `CreateOpportunityDialog` and expanded opportunity detail (all fields + delete)
+- Edit/delete dialogs for clients, companies, and contacts
+- Contact detail page at `/contacts/[id]`
+- Satellite UI: reminders, notifications inbox, tags management, pipeline stages view
+- `useWorkspaceMembers` hook for assignee selectors
+- Quick-add actions on client detail tabs (tasks, notes, activities, opportunities)
+- Global search: companies and activities; fixed task/contact deep-links
+
+### Changed
+
+- Tasks and activities pages use Suspense + `?id=` dialog deep-links
+- Sidebar: reminders, notifications, tags, and pipeline settings links
+- Topbar bell links to notifications inbox
+- Companies create button gated by `COMPANIES_CREATE` permission
+
 ## [0.2.1] — 2026-06-09
 
 Railway production deploy fixes and GitHub OAuth schema alignment.
