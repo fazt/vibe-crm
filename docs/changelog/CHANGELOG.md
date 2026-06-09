@@ -4,6 +4,15 @@ All notable changes to Vibe CRM are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).  
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] — 2026-06-09
+
+Update README for public release and document current platform capabilities.
+
+### Changed
+
+- Root README: RBAC, Stripe billing, demo accounts, Railway deploy, API routes, and scripts
+- GitHub repository visibility set to public
+
 ## [0.3.1] — 2026-06-09
 
 Fix workspace header race causing "Workspace header required" on app load.
