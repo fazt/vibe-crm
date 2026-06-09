@@ -4,6 +4,20 @@ All notable changes to Vibe CRM are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).  
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-06-09
+
+Railway production deploy fixes and GitHub OAuth schema alignment.
+
+### Added
+
+- Prisma migration `20260609020000_add_user_github_id` for `User.githubId` (GitHub OAuth)
+- `migrate:deploy` script in `@vibe-crm/database` for production migrations
+- Railway config: `railway.toml` for api and web, service config JSON, env sync and seed scripts
+
+### Fixed
+
+- API listens on `PORT` (Railway) with fallback to `API_PORT` — fixes healthcheck failures on deploy
+
 ## [0.2.0] — 2026-06-09
 
 RBAC, Stripe billing, avatar uploads, and realtime Kanban updates.

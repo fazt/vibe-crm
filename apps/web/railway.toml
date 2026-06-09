@@ -1,0 +1,8 @@
+[build]
+buildCommand = "pnpm install && pnpm exec turbo run build --filter=@vibe-crm/web"
+watchPatterns = ["apps/web/**", "packages/shared/**", "packages/validators/**"]
+
+[deploy]
+startCommand = "pnpm --filter @vibe-crm/web start"
+healthcheckPath = "/"
+healthcheckTimeout = 120

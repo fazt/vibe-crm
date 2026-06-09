@@ -1,0 +1,27 @@
+{
+  "services": {
+    "b01cd3aa-f0ba-427c-bad2-7af2c25620a0": {
+      "build": {
+        "buildCommand": "pnpm install && pnpm --filter @vibe-crm/database generate && pnpm exec turbo run build --filter=@vibe-crm/api",
+        "watchPatterns": ["apps/api/**", "packages/**"]
+      },
+      "deploy": {
+        "preDeployCommand": "pnpm --filter @vibe-crm/database migrate:deploy",
+        "startCommand": "pnpm --filter @vibe-crm/api start",
+        "healthcheckPath": "/api/billing/plans",
+        "healthcheckTimeout": 120
+      }
+    },
+    "14b8d326-d4a4-4e0b-b630-fab49c17348a": {
+      "build": {
+        "buildCommand": "pnpm install && pnpm exec turbo run build --filter=@vibe-crm/web",
+        "watchPatterns": ["apps/web/**", "packages/shared/**", "packages/validators/**"]
+      },
+      "deploy": {
+        "startCommand": "pnpm --filter @vibe-crm/web start",
+        "healthcheckPath": "/",
+        "healthcheckTimeout": 120
+      }
+    }
+  }
+}

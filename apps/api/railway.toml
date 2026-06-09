@@ -1,0 +1,9 @@
+[build]
+buildCommand = "pnpm install && pnpm --filter @vibe-crm/database generate && pnpm exec turbo run build --filter=@vibe-crm/api"
+watchPatterns = ["apps/api/**", "packages/**"]
+
+[deploy]
+preDeployCommand = "pnpm --filter @vibe-crm/database migrate:deploy"
+startCommand = "pnpm --filter @vibe-crm/api start"
+healthcheckPath = "/api/billing/plans"
+healthcheckTimeout = 120
